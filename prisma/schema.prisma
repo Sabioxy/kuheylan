@@ -1,0 +1,203 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "sqlite" // Switch to "postgresql" when DATABASE_URL points to Postgres
+  url      = env("DATABASE_URL")
+}
+
+enum ArtistStatus {
+  STARTER
+  MID
+  PREMIUM
+}
+
+model Artist {
+  id              String       @id @default(cuid())
+  name            String
+  bio             String?
+  profileImageUrl String?
+  status          ArtistStatus @default(STARTER)
+
+  // Updated on each sale payout (business rule: STARTER => 7% commission, else 10%)
+  balanceCents Int @default(0)
+
+  albums    Album[]
+  tracks    Track[]
+  purchases Purchase[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+model Album {
+  id        String   @id @default(cuid())
+  name      String
+  releaseAt DateTime?
+  coverUrl  String?
+
+  artist   Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  artistId String
+
+  tracks Track[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([artistId])
+}
+
+model Track {
+  id            String  @id @default(cuid())
+  name          String
+
+  // Full file URL (available after purchase in the future).
+  cdnAudioUrl   String
+
+  // Preview URL (safe for guests); if null, UI can fall back to cdnAudioUrl.
+  previewAudioUrl String?
+
+  bpm           Int?
+  genre         String?
+  coverImageUrl String?
+
+  // Currency stored as cents.
+  basePriceCents      Int
+  effectivePriceCents Int
+
+  // Stock never decreases; selling can be disabled by artist.
+  isAvailable Boolean @default(true)
+
+  album   Album  @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  albumId String
+
+  // Denormalized for quick access and commission calc.
+  artist   Artist @relation(fields: [artistId], references: [id], onDelete: Restrict)
+  artistId String
+
+  promotions PromotionTrack[]
+  purchases  Purchase[]
+  library    UserLibrary[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([albumId])
+  @@index([artistId])
+  @@index([isAvailable])
+}
+
+model User {
+  id String @id @default(cuid())
+
+  // Login identity
+  email    String @unique
+  username String @unique
+
+  // Password hash stored as: s2:<saltBase64>:<hashBase64>
+  // Empty means "no password set" (cannot log in).
+  passwordHash String @default("")
+
+  name String?
+
+  sessions  Session[]
+  library   UserLibrary[]
+  purchases Purchase[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Session {
+  id String @id @default(cuid())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  tokenHash String @unique
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// User-owned, lifetime licenses.
+model UserLibrary {
+  id          String   @id @default(cuid())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  track       Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  trackId     String
+  purchasedAt DateTime @default(now())
+
+  // Optional link to the immutable purchase log.
+  purchase   Purchase? @relation("LibraryPurchase", fields: [purchaseId], references: [id], onDelete: SetNull)
+  purchaseId String?
+
+  @@unique([userId, trackId])
+  @@index([trackId])
+}
+
+model Promotion {
+  id              String   @id @default(cuid())
+  name            String
+  discountPercent Int      // 0..100
+  startsAt        DateTime
+  endsAt          DateTime
+
+  tracks PromotionTrack[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([startsAt, endsAt])
+}
+
+model PromotionTrack {
+  promotion   Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  promotionId String
+  track       Track     @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  trackId     String
+
+  // Optional: mark a track as "sponsored" on the homepage while a promotion is active.
+  isSponsored Boolean @default(false)
+
+  @@id([promotionId, trackId])
+  @@index([trackId])
+}
+
+// Immutable sale log: captures the price and commission at the time of purchase.
+model Purchase {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  userId String
+
+  track   Track  @relation(fields: [trackId], references: [id], onDelete: Restrict)
+  trackId String
+
+  artist   Artist @relation(fields: [artistId], references: [id], onDelete: Restrict)
+  artistId String
+
+  // Prices (cents) as of checkout time.
+  basePriceCents      Int
+  effectivePriceCents Int
+
+  // Commission and payout (cents).
+  commissionBps     Int // e.g. 700 or 1000
+  commissionCents   Int
+  artistPayoutCents Int
+
+  libraryEntries UserLibrary[] @relation("LibraryPurchase")
+
+  @@index([userId, createdAt])
+  @@index([artistId, createdAt])
+  @@index([trackId, createdAt])
+}

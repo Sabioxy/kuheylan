@@ -10,6 +10,7 @@ type Body = {
   username?: unknown;
   password?: unknown;
   name?: unknown;
+  isArtist?: unknown;
 };
 
 function setSessionCookie(res: NextResponse, token: string, maxAgeSeconds: number) {
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
   const username = usernameRaw.toLowerCase();
   const password = typeof body.password === "string" ? body.password : "";
   const name = typeof body.name === "string" ? body.name.trim() : undefined;
+  const isArtist = typeof body.isArtist === "boolean" ? body.isArtist : false;
 
   if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return NextResponse.json({ error: "Invalid email" }, { status: 400 });
@@ -53,14 +55,27 @@ export async function POST(req: Request) {
   const passwordHash = await hashPassword(password);
 
   try {
+    let newArtistId: string | undefined = undefined;
+
+    if (isArtist) {
+      const newArtist = await prisma.artist.create({
+        data: {
+          name: name || username,
+        },
+      });
+      newArtistId = newArtist.id;
+    }
+
     const user = await prisma.user.create({
       data: {
         email,
         username,
         passwordHash,
         name,
+        role: isArtist ? "ARTIST" : "USER",
+        artistId: newArtistId,
       },
-      select: { id: true, email: true, username: true, name: true },
+      select: { id: true, email: true, username: true, name: true, role: true, artistId: true },
     });
 
     const token = newSessionToken();

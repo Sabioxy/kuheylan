@@ -19,6 +19,19 @@ type Props = {
     effectivePriceCents: number;
     isAvailable: boolean;
   }[];
+  stats?: {
+    balanceCents: number;
+    totalSalesCount: number;
+    recentSales: {
+      id: string;
+      trackName: string;
+      buyerUsername: string;
+      effectivePriceCents: number;
+      commissionCents: number;
+      artistPayoutCents: number;
+      createdAt: string;
+    }[];
+  };
 };
 
 type ApiError = { error?: unknown };
@@ -37,7 +50,7 @@ const buttonClass =
   "inline-flex items-center justify-center rounded-full bg-zinc-950 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 " +
   "disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100";
 
-export function ArtistStudio({ artistId, albums, tracks }: Props) {
+export function ArtistStudio({ artistId, albums, tracks, stats }: Props) {
   const [albumList, setAlbumList] = useState(albums);
   const [trackList, setTrackList] = useState(tracks);
 
@@ -246,6 +259,60 @@ export function ArtistStudio({ artistId, albums, tracks }: Props) {
 
   return (
     <div className="space-y-10">
+      {stats && (
+        <div className="rounded-2xl border border-zinc-200/60 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-zinc-900/40">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">İstatistikler ve Kazançlar</h2>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4 dark:border-white/5 dark:bg-zinc-900">
+              <div className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Toplam Bakiye</div>
+              <div className="mt-1 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+                {new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(stats.balanceCents / 100)}
+              </div>
+            </div>
+            <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4 dark:border-white/5 dark:bg-zinc-900">
+              <div className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Toplam Satış</div>
+              <div className="mt-1 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+                {stats.totalSalesCount}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-50 mb-4">Son Satışlar</h3>
+            {stats.recentSales.length > 0 ? (
+              <div className="overflow-hidden rounded-lg border border-zinc-200/60 dark:border-white/10">
+                <table className="min-w-full divide-y divide-zinc-200/60 dark:divide-white/10">
+                  <thead className="bg-zinc-50 dark:bg-zinc-900">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400">Şarkı</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400">Alıcı</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400">Kazanç</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400">Tarih</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-200/60 bg-white dark:divide-white/10 dark:bg-zinc-950">
+                    {stats.recentSales.map((sale) => (
+                      <tr key={sale.id}>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-900 dark:text-zinc-50">{sale.trackName}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400">@{sale.buyerUsername}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                          +{new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(sale.artistPayoutCents / 100)}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400">
+                          {new Date(sale.createdAt).toLocaleDateString("tr-TR")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">Henüz satış yapılmamış.</p>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="rounded-lg border p-4">
         <h2 className="text-lg font-medium">Albüm Ekle</h2>
 

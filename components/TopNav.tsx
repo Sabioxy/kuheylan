@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Heart, LogIn, LogOut, Music2, Store, UserPlus } from "lucide-react";
+import { Heart, LogIn, LogOut, Music2, Store, UserPlus, Search, Settings } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/current-user";
+import CartLink from "./CartLink";
 
 export default async function TopNav() {
   const user = await getCurrentUser();
@@ -24,9 +25,24 @@ export default async function TopNav() {
         <nav className="flex items-center gap-2">
           {user ? (
             <>
-              <div className="hidden rounded-full border border-zinc-200/60 bg-white px-4 py-2 text-sm font-medium text-zinc-900 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50 sm:inline-flex">
+              <form action="/search" method="get" className="hidden relative sm:block">
+                <input
+                  type="search"
+                  name="q"
+                  placeholder="Ara..."
+                  className="w-32 rounded-full border border-zinc-200/60 bg-white py-2 pl-9 pr-4 text-sm text-zinc-900 outline-none transition-all focus:w-48 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50 dark:focus:w-48"
+                />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              </form>
+
+              <Link
+                href="/settings"
+                className="hidden items-center gap-1.5 rounded-full border border-zinc-200/60 bg-white px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50 dark:hover:bg-white/10 sm:inline-flex"
+                title="Profil Ayarları"
+              >
+                <Settings className="h-4 w-4 text-zinc-500" />
                 @{user.username}
-              </div>
+              </Link>
 
               <Link
                 href="/library"
@@ -64,6 +80,15 @@ export default async function TopNav() {
             </>
           ) : (
             <>
+              <form action="/search" method="get" className="hidden relative sm:block">
+                <input
+                  type="search"
+                  name="q"
+                  placeholder="Ara..."
+                  className="w-32 rounded-full border border-zinc-200/60 bg-white py-2 pl-9 pr-4 text-sm text-zinc-900 outline-none transition-all focus:w-48 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50 dark:focus:w-48"
+                />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              </form>
               <Link
                 href="/login"
                 className="inline-flex items-center gap-2 rounded-full border border-zinc-200/60 bg-white px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50 dark:hover:bg-white/10"
@@ -86,6 +111,8 @@ export default async function TopNav() {
           >
             <Heart className="h-4 w-4" /> Favoriler
           </Link>
+
+          <CartLink />
 
           <Link
             href="/market"

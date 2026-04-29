@@ -12,7 +12,7 @@ export default async function ArtistAdminPage() {
 
   const artist = await prisma.artist.findUnique({
     where: { id: user.artistId },
-    select: { id: true, name: true },
+    select: { id: true, name: true, balanceCents: true },
   });
 
   if (!artist) redirect("/");
@@ -47,6 +47,30 @@ export default async function ArtistAdminPage() {
     },
   });
 
+  const recentSalesRaw = await prisma.purchase.findMany({
+    where: { artistId: artist.id },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+    include: {
+      track: { select: { name: true } },
+      user: { select: { username: true } },
+    },
+  });
+
+  const totalSalesCount = await prisma.purchase.count({
+    where: { artistId: artist.id },
+  });
+
+  const recentSales = recentSalesRaw.map((s) => ({
+    id: s.id,
+    trackName: s.track.name,
+    buyerUsername: s.user.username,
+    effectivePriceCents: s.effectivePriceCents,
+    commissionCents: s.commissionCents,
+    artistPayoutCents: s.artistPayoutCents,
+    createdAt: s.createdAt.toISOString(),
+  }));
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <h1 className="text-2xl font-semibold">Şarkıcı Paneli</h1>
@@ -55,7 +79,16 @@ export default async function ArtistAdminPage() {
       </p>
 
       <div className="mt-6">
-        <ArtistStudio artistId={artist.id} albums={albums} tracks={tracks} />
+        <ArtistStudio 
+          artistId={artist.id} 
+          albums={albums} 
+          tracks={tracks} 
+          stats={{
+            balanceCents: artist.balanceCents,
+            totalSalesCount,
+            recentSales,
+          }}
+        />
       </div>
     </div>
   );

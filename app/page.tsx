@@ -175,7 +175,7 @@ export default async function Home() {
                 </p>
                 <div className="mt-4 grid gap-4">
                   {sponsored.map((t) => (
-                    <TrackCard key={t.id} track={t} canAddToLibrary={false} />
+                    <TrackCard key={t.id} track={t} canAddToLibrary={Boolean(user)} />
                   ))}
                 </div>
               </div>
@@ -214,7 +214,7 @@ export default async function Home() {
               </div>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 {topSellers.map((t) => (
-                  <TrackCard key={t.id} track={t} canAddToLibrary={false} />
+                  <TrackCard key={t.id} track={t} canAddToLibrary={Boolean(user)} />
                 ))}
               </div>
             </section>
@@ -228,7 +228,7 @@ export default async function Home() {
               </div>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 {forYou.map((t) => (
-                  <TrackCard key={t.id} track={t} canAddToLibrary={false} />
+                  <TrackCard key={t.id} track={t} canAddToLibrary={Boolean(user)} />
                 ))}
               </div>
             </section>

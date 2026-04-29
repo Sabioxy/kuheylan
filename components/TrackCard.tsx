@@ -7,6 +7,7 @@ import { useSyncExternalStore } from "react";
 import { useState } from "react";
 
 import { usePlayer } from "@/components/PlayerProvider";
+import { readCart, subscribeCart, addToCart, removeFromCart, EMPTY_CART } from "@/lib/cart";
 
 export type TrackCardModel = {
   id: string;
@@ -132,11 +133,13 @@ export default function TrackCard({
   const hasDiscount = track.effectivePriceCents < track.basePriceCents;
   const isAvailable = track.isAvailable ?? true;
   const addLocked = !canAddToLibrary;
-  const [adding, setAdding] = useState(false);
-  const [owned, setOwned] = useState(Boolean(isOwned));
+  const [owned] = useState(Boolean(isOwned));
 
   const favorites = useSyncExternalStore(subscribeFavorites, readFavorites, () => EMPTY_FAVORITES);
-  const isFavorite = favorites.includes(track.id);
+  const isFavorite = favorites?.includes(track.id);
+
+  const cart = useSyncExternalStore(subscribeCart, readCart, () => EMPTY_CART);
+  const inCart = cart?.includes(track.id);
 
   return (
     <motion.article
@@ -152,9 +155,10 @@ export default function TrackCard({
         type="button"
         whileTap={{ scale: 0.95 }}
         onClick={() => {
+          const currentFavorites = favorites || [];
           const next = isFavorite
-            ? favorites.filter((id) => id !== track.id)
-            : [...favorites, track.id];
+            ? currentFavorites.filter((id) => id !== track.id)
+            : [...currentFavorites, track.id];
           writeFavorites(next);
         }}
         aria-pressed={isFavorite}
@@ -258,56 +262,36 @@ export default function TrackCard({
         {showAddToLibrary ? (
           <motion.button
             type="button"
-            disabled={!isAvailable || addLocked || adding || owned}
-            aria-disabled={!isAvailable || addLocked || adding || owned}
-            onClick={async () => {
-              if (!isAvailable || addLocked || adding || owned) return;
-
-              if (onAddToLibrary) {
-                onAddToLibrary(track.id);
+            disabled={!isAvailable || addLocked}
+            aria-disabled={!isAvailable || addLocked}
+            onClick={() => {
+              if (!isAvailable || addLocked) return;
+              if (inCart) {
+                router.push("/cart");
                 return;
               }
-
-              setAdding(true);
-              try {
-                const res = await fetch("/api/library", {
-                  method: "POST",
-                  headers: { "content-type": "application/json" },
-                  body: JSON.stringify({ trackId: track.id }),
-                });
-
-                if (res.status === 401) {
-                  router.push("/login");
-                  return;
-                }
-
-                if (res.ok) {
-                  setOwned(true);
-                  router.refresh();
-                }
-              } finally {
-                setAdding(false);
-              }
+              addToCart(track.id);
             }}
             className={
-              "inline-flex w-full min-w-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-zinc-950 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 " +
-              "disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
+              "inline-flex w-full min-w-0 cursor-pointer items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-medium shadow-sm transition-colors " +
+              (inCart 
+                ? "bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 "
+                : "bg-zinc-950 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100 ") +
+              "disabled:cursor-not-allowed disabled:opacity-50"
             }
             title={
               addLocked
-                ? "Misafir modunda kütüphaneye eklenmez"
+                ? "Misafir modunda sepete eklenmez"
                 : !isAvailable
                   ? "Satış kapalı"
                   : owned
-                    ? "Alındı"
-                  : adding
-                    ? "Ekleniyor"
-                    : undefined
+                    ? (inCart ? "Sepette (Hediye)" : "Hediye İçin Sepete Ekle")
+                    : (inCart ? "Sepette - Sepete Git" : "Sepete Ekle")
             }
           >
             <Plus className="h-4 w-4 shrink-0" />
-            <span className="min-w-0 truncate sm:hidden">Ekle</span>
-            <span className="hidden min-w-0 truncate sm:inline">{owned ? "Alındı" : "Kütüphanene Ekle"}</span>
+            <span className="min-w-0 truncate sm:hidden">{owned ? (inCart ? "Sepette" : "Hediye") : inCart ? "Sepette" : "Ekle"}</span>
+            <span className="hidden min-w-0 truncate sm:inline">{owned ? (inCart ? "Sepette (Hediye)" : "Hediye İçin Ekle") : inCart ? "Sepette (Git)" : "Sepete Ekle"}</span>
           </motion.button>
         ) : null}
       </div>

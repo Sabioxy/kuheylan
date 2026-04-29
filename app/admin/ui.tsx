@@ -42,10 +42,15 @@ const buttonClass =
   "disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100";
 
 export function AdminStudio({ artists, albums, tracks }: Props) {
+  const [artistList, setArtistList] = useState<ArtistOption[]>(artists);
   const [artistId, setArtistId] = useState(artists[0]?.id ?? "");
 
   const [albumList, setAlbumList] = useState<AlbumOption[]>(albums);
   const [trackList, setTrackList] = useState<TrackOption[]>(tracks);
+
+  const [newArtistName, setNewArtistName] = useState("");
+  const [newArtistBio, setNewArtistBio] = useState("");
+  const [newArtistProfileImageUrl, setNewArtistProfileImageUrl] = useState("");
 
   const [albumName, setAlbumName] = useState("");
   const [albumCoverUrl, setAlbumCoverUrl] = useState("");
@@ -80,9 +85,9 @@ export function AdminStudio({ artists, albums, tracks }: Props) {
   const [editTrackIsAvailable, setEditTrackIsAvailable] = useState(true);
 
   const [result, setResult] = useState<string>("");
-  const hasArtists = artists.length > 0;
+  const hasArtists = artistList.length > 0;
 
-  const artistOptions = useMemo(() => artists, [artists]);
+  const artistOptions = useMemo(() => artistList, [artistList]);
   const albumOptions = useMemo(
     () => albumList.filter((a) => a.artistId === artistId),
     [albumList, artistId],
@@ -94,6 +99,36 @@ export function AdminStudio({ artists, albums, tracks }: Props) {
   );
 
   const hasAlbums = albumOptions.length > 0;
+
+  async function createArtist() {
+    setResult("");
+
+    const res = await fetch("/api/studio/artist", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: newArtistName,
+        bio: newArtistBio || undefined,
+        profileImageUrl: newArtistProfileImageUrl || undefined,
+      }),
+    });
+
+    const json: unknown = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setResult(`Sanatçı hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
+      return;
+    }
+
+    const created = (json as { artist?: ArtistOption }).artist;
+    if (created) {
+      setArtistList((prev) => [...prev, created]);
+      setArtistId(created.id); // select the newly created artist
+      setNewArtistName("");
+      setNewArtistBio("");
+      setNewArtistProfileImageUrl("");
+      setResult("Sanatçı oluşturuldu!");
+    }
+  }
 
   async function createAlbum() {
     setResult("");
@@ -264,6 +299,42 @@ export function AdminStudio({ artists, albums, tracks }: Props) {
 
   return (
     <div className="space-y-10">
+      <div className="rounded-lg border p-4">
+        <h2 className="text-lg font-medium">Sanatçı Ekle</h2>
+        <div className="mt-4 grid gap-4">
+          <div>
+            <label htmlFor="artist-name" className={labelClass}>Sanatçı Adı</label>
+            <input
+              id="artist-name"
+              className={inputClass}
+              value={newArtistName}
+              onChange={(e) => setNewArtistName(e.target.value)}
+            />
+          </div>
+          <div>
+            <label htmlFor="artist-bio" className={labelClass}>Biyografi (opsiyonel)</label>
+            <input
+              id="artist-bio"
+              className={inputClass}
+              value={newArtistBio}
+              onChange={(e) => setNewArtistBio(e.target.value)}
+            />
+          </div>
+          <div>
+            <label htmlFor="artist-profile" className={labelClass}>Profil Fotoğrafı URL (opsiyonel)</label>
+            <input
+              id="artist-profile"
+              className={inputClass}
+              value={newArtistProfileImageUrl}
+              onChange={(e) => setNewArtistProfileImageUrl(e.target.value)}
+            />
+          </div>
+          <button className={buttonClass} onClick={createArtist} disabled={!newArtistName.trim()}>
+            Sanatçı Oluştur
+          </button>
+        </div>
+      </div>
+
       <div className="rounded-lg border p-4">
         <h2 className="text-lg font-medium">Sanatçı Seç</h2>
         <div className="mt-4">

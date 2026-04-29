@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [isArtist, setIsArtist] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,6 +45,7 @@ export default function RegisterPage() {
                   email,
                   name: name.trim() ? name : undefined,
                   password,
+                  isArtist,
                 }),
               });
 
@@ -127,6 +129,19 @@ export default function RegisterPage() {
               placeholder="en az 8 karakter"
               required
             />
+          </div>
+
+          <div className="flex items-center gap-2 mt-2">
+            <input
+              id="is-artist"
+              type="checkbox"
+              checked={isArtist}
+              onChange={(e) => setIsArtist(e.target.checked)}
+              className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900 dark:border-white/10 dark:bg-zinc-950/40 dark:checked:bg-zinc-50"
+            />
+            <label htmlFor="is-artist" className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+              Şarkıcı olarak kayıt ol
+            </label>
           </div>
 
           {error ? (

@@ -28,6 +28,31 @@ export default async function TopNav() {
                 @{user.username}
               </div>
 
+              <Link
+                href="/library"
+                className="inline-flex items-center gap-2 rounded-full border border-zinc-200/60 bg-white px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50 dark:hover:bg-white/10"
+              >
+                Kütüphane
+              </Link>
+
+              {user.role === "ADMIN" ? (
+                <Link
+                  href="/admin"
+                  className="inline-flex items-center gap-2 rounded-full border border-zinc-200/60 bg-white px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50 dark:hover:bg-white/10"
+                >
+                  Admin Panel
+                </Link>
+              ) : null}
+
+              {user.role === "ARTIST" ? (
+                <Link
+                  href="/artist-admin"
+                  className="inline-flex items-center gap-2 rounded-full border border-zinc-200/60 bg-white px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50 dark:hover:bg-white/10"
+                >
+                  Şarkıcı Paneli
+                </Link>
+              ) : null}
+
               <form action="/api/auth/logout" method="post">
                 <button
                   type="submit"

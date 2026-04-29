@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
 
 type Body = {
@@ -7,6 +8,8 @@ type Body = {
 };
 
 export async function POST(req: Request) {
+  const user = await getCurrentUser();
+
   let body: Body;
   try {
     body = (await req.json()) as Body;
@@ -34,6 +37,15 @@ export async function POST(req: Request) {
     include: { artist: { select: { name: true } } },
   });
 
+  const ownedSet = new Set<string>();
+  if (user && ids.length) {
+    const owned = await prisma.userLibrary.findMany({
+      where: { userId: user.id, trackId: { in: ids } },
+      select: { trackId: true },
+    });
+    for (const row of owned) ownedSet.add(row.trackId);
+  }
+
   const byId = new Map(rows.map((t) => [t.id, t] as const));
   const ordered = ids.map((id) => byId.get(id)).filter(Boolean);
 
@@ -47,7 +59,7 @@ export async function POST(req: Request) {
     effectivePriceCents: t!.effectivePriceCents,
     isAvailable: t!.isAvailable,
     imageUrl: t!.coverImageUrl ?? undefined,
-    audioUrl: t!.previewAudioUrl ?? t!.cdnAudioUrl,
+    audioUrl: ownedSet.has(t!.id) ? t!.cdnAudioUrl : (t!.previewAudioUrl ?? t!.cdnAudioUrl),
   }));
 
   return NextResponse.json({ tracks });

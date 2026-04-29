@@ -27,8 +27,19 @@ async function main() {
   await prisma.session.deleteMany();
   await prisma.user.deleteMany();
 
-  const user = await prisma.user.create({
+  await prisma.user.create({
     data: {
+      role: "ADMIN",
+      email: "admin@kuheylan.local",
+      username: "admin",
+      passwordHash: await hashPassword("demo12345"),
+      name: "Admin",
+    },
+  });
+
+  await prisma.user.create({
+    data: {
+      role: "USER",
       email: "demo@kuheylan.local",
       username: "demo",
       passwordHash: await hashPassword("demo12345"),
@@ -36,242 +47,118 @@ async function main() {
     },
   });
 
-  const aylin = await prisma.artist.create({
+  const sagopa = await prisma.artist.create({
     data: {
-      name: "Aylin Kaya",
-      status: "STARTER",
-      bio: "House / club odaklı prodüktör.",
-    },
-  });
-
-  const baran = await prisma.artist.create({
-    data: {
-      name: "Baran",
-      status: "MID",
-      bio: "Lo-fi / şehir gece estetiği.",
-    },
-  });
-
-  const kuzey = await prisma.artist.create({
-    data: {
-      name: "Kuzey",
+      name: "Sagopa Kajmer",
       status: "PREMIUM",
-      bio: "Techno — minimal ve sert.",
+      bio: "Demo içerik (tek sanatçı).",
     },
   });
 
-  const mira = await prisma.artist.create({
+  await prisma.user.create({
     data: {
-      name: "Mira",
-      status: "STARTER",
-      bio: "Indie / dreamy textures.",
+      role: "ARTIST",
+      email: "sagopa@kuheylan.local",
+      username: "sagopa",
+      passwordHash: await hashPassword("demo12345"),
+      name: "Sagopa",
+      artistId: sagopa.id,
     },
   });
 
-  const selim = await prisma.artist.create({
+  const album = await prisma.album.create({
     data: {
-      name: "Selim",
-      status: "MID",
-      bio: "Drum & Bass.",
+      name: "Photos & Music",
+      artistId: sagopa.id,
+      coverUrl: "/images/sagopa/kuheylan-cover.jpg",
     },
   });
 
-  const deniz = await prisma.artist.create({
+  await prisma.track.create({
     data: {
-      name: "Deniz",
-      status: "STARTER",
-      bio: "Ambient / film müziği.",
-    },
-  });
-
-  const albumAylin = await prisma.album.create({
-    data: {
-      name: "Midnight",
-      artistId: aylin.id,
-    },
-  });
-  const albumBaran = await prisma.album.create({
-    data: {
-      name: "Neon",
-      artistId: baran.id,
-    },
-  });
-  const albumKuzey = await prisma.album.create({
-    data: {
-      name: "Quartz EP",
-      artistId: kuzey.id,
-    },
-  });
-  const albumMira = await prisma.album.create({
-    data: {
-      name: "Salt & Air",
-      artistId: mira.id,
-    },
-  });
-  const albumSelim = await prisma.album.create({
-    data: {
-      name: "Noon",
-      artistId: selim.id,
-    },
-  });
-  const albumDeniz = await prisma.album.create({
-    data: {
-      name: "Soft",
-      artistId: deniz.id,
-    },
-  });
-
-  const tMidnight = await prisma.track.create({
-    data: {
-      name: "Midnight License",
-      artistId: aylin.id,
-      albumId: albumAylin.id,
-      bpm: 122,
-      genre: "House",
-      cdnAudioUrl: "/audio/demo.wav",
-      previewAudioUrl: "/audio/demo.wav",
-      coverImageUrl: null,
+      name: "Küheylan",
+      artistId: sagopa.id,
+      albumId: album.id,
+      bpm: null,
+      genre: null,
+      coverImageUrl: "/images/sagopa/kuheylan-cover.jpg",
+      previewAudioUrl: "/audio/sagopa/kuheylan-preview.mp3",
+      cdnAudioUrl: "/audio/sagopa/kuheylan-full.mp3",
       basePriceCents: 19900,
-      effectivePriceCents: 14900,
+      effectivePriceCents: 19900,
       isAvailable: true,
     },
   });
 
-  const tNeon = await prisma.track.create({
-    data: {
-      name: "Neon Skyline",
-      artistId: baran.id,
-      albumId: albumBaran.id,
-      bpm: 98,
-      genre: "Lo-fi",
-      cdnAudioUrl: "/audio/demo.wav",
-      previewAudioUrl: "/audio/demo.wav",
-      coverImageUrl: null,
-      basePriceCents: 12900,
-      effectivePriceCents: 12900,
-      isAvailable: true,
-    },
-  });
+  const demoAudioUrl = "/audio/demo/silence-10s.wav";
 
-  const tQuartz = await prisma.track.create({
-    data: {
-      name: "Quartz",
-      artistId: kuzey.id,
-      albumId: albumKuzey.id,
-      bpm: 128,
-      genre: "Techno",
-      cdnAudioUrl: "/audio/demo.wav",
-      previewAudioUrl: "/audio/demo.wav",
-      coverImageUrl: null,
-      basePriceCents: 21900,
-      effectivePriceCents: 17900,
-      isAvailable: true,
-    },
-  });
-
-  await prisma.track.create({
-    data: {
-      name: "Salt & Air",
-      artistId: mira.id,
-      albumId: albumMira.id,
-      bpm: 110,
-      genre: "Indie",
-      cdnAudioUrl: "/audio/demo.wav",
-      previewAudioUrl: "/audio/demo.wav",
-      coverImageUrl: null,
+  const demoArtists: Array<{
+    name: string;
+    status: "STARTER" | "MID" | "PREMIUM";
+    albumName: string;
+    coverUrl: string;
+    trackName: string;
+    basePriceCents: number;
+  }> = [
+    {
+      name: "Demo Artist 1",
+      status: "STARTER",
+      albumName: "Demo Albüm 1",
+      coverUrl: "/images/demo/demo-artist-1.svg",
+      trackName: "Demo Track 1",
       basePriceCents: 9900,
-      effectivePriceCents: 9900,
-      isAvailable: true,
     },
-  });
-
-  const tHighNoon = await prisma.track.create({
-    data: {
-      name: "High Noon",
-      artistId: selim.id,
-      albumId: albumSelim.id,
-      bpm: 140,
-      genre: "Drum & Bass",
-      cdnAudioUrl: "/audio/demo.wav",
-      previewAudioUrl: "/audio/demo.wav",
-      coverImageUrl: null,
-      basePriceCents: 24900,
-      effectivePriceCents: 24900,
-      isAvailable: true,
+    {
+      name: "Demo Artist 2",
+      status: "MID",
+      albumName: "Demo Albüm 2",
+      coverUrl: "/images/demo/demo-artist-2.svg",
+      trackName: "Demo Track 2",
+      basePriceCents: 14900,
     },
-  });
-
-  await prisma.track.create({
-    data: {
-      name: "Soft Signal",
-      artistId: deniz.id,
-      albumId: albumDeniz.id,
-      bpm: 85,
-      genre: "Ambient",
-      cdnAudioUrl: "/audio/demo.wav",
-      previewAudioUrl: "/audio/demo.wav",
-      coverImageUrl: null,
-      basePriceCents: 8900,
-      effectivePriceCents: 8900,
-      isAvailable: false,
+    {
+      name: "Demo Artist 3",
+      status: "PREMIUM",
+      albumName: "Demo Albüm 3",
+      coverUrl: "/images/demo/demo-artist-3.svg",
+      trackName: "Demo Track 3",
+      basePriceCents: 19900,
     },
-  });
+  ];
 
-  const now = new Date();
-  const startsAt = new Date(now.getTime() - 1000 * 60 * 60 * 24);
-  const endsAt = new Date(now.getTime() + 1000 * 60 * 60 * 24 * 14);
-
-  await prisma.promotion.create({
-    data: {
-      name: "Nisan Kampanyası",
-      discountPercent: 25,
-      startsAt,
-      endsAt,
-      tracks: {
-        create: [
-          { trackId: tMidnight.id, isSponsored: true },
-          { trackId: tQuartz.id, isSponsored: true },
-        ],
+  for (const a of demoArtists) {
+    const artist = await prisma.artist.create({
+      data: {
+        name: a.name,
+        status: a.status,
+        bio: "Demo içerik.",
       },
-    },
-  });
+    });
 
-  // Seed purchases (top sellers demo)
-  const makePurchase = async (trackId: string, artistId: string, count: number) => {
-    const track = await prisma.track.findUniqueOrThrow({ where: { id: trackId } });
-    for (let i = 0; i < count; i++) {
-      const commissionBps = 1000;
-      const commissionCents = Math.round((track.effectivePriceCents * commissionBps) / 10000);
-      const artistPayoutCents = track.effectivePriceCents - commissionCents;
+    const demoAlbum = await prisma.album.create({
+      data: {
+        name: a.albumName,
+        artistId: artist.id,
+        coverUrl: a.coverUrl,
+      },
+    });
 
-      await prisma.purchase.create({
-        data: {
-          userId: user.id,
-          trackId: track.id,
-          artistId,
-          basePriceCents: track.basePriceCents,
-          effectivePriceCents: track.effectivePriceCents,
-          commissionBps,
-          commissionCents,
-          artistPayoutCents,
-        },
-      });
-    }
-  };
-
-  await makePurchase(tQuartz.id, kuzey.id, 8);
-  await makePurchase(tMidnight.id, aylin.id, 5);
-  await makePurchase(tHighNoon.id, selim.id, 3);
-  await makePurchase(tNeon.id, baran.id, 2);
-
-  // A sample library entry
-  await prisma.userLibrary.create({
-    data: {
-      userId: user.id,
-      trackId: tMidnight.id,
-      purchasedAt: now,
-    },
-  });
+    await prisma.track.create({
+      data: {
+        name: a.trackName,
+        artistId: artist.id,
+        albumId: demoAlbum.id,
+        bpm: null,
+        genre: null,
+        coverImageUrl: a.coverUrl,
+        previewAudioUrl: demoAudioUrl,
+        cdnAudioUrl: demoAudioUrl,
+        basePriceCents: a.basePriceCents,
+        effectivePriceCents: a.basePriceCents,
+        isAvailable: true,
+      },
+    });
+  }
 
 }
 

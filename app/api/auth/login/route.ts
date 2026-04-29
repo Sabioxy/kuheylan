@@ -1,3 +1,5 @@
+//sabioxy@kuheylan.com - Erdem12345
+
 import { NextResponse } from "next/server";
 
 import { hashSessionToken, newSessionToken, SESSION_COOKIE, verifyPassword } from "@/lib/auth";

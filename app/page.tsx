@@ -4,6 +4,7 @@ import HomeFavoritesSection from "@/components/HomeFavoritesSection";
 import Reveal from "@/components/Reveal";
 import ScrollToMarketplace from "@/components/ScrollToMarketplace";
 import TrackCard, { type TrackCardModel } from "@/components/TrackCard";
+import { getCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ function toCardModel(t: {
   cdnAudioUrl: string;
   previewAudioUrl: string | null;
   artist: { name: string };
-}): TrackCardModel {
+}, opts: { isOwned: boolean }): TrackCardModel {
   return {
     id: t.id,
     name: t.name,
@@ -31,12 +32,13 @@ function toCardModel(t: {
     effectivePriceCents: t.effectivePriceCents,
     isAvailable: t.isAvailable,
     imageUrl: t.coverImageUrl ?? undefined,
-    audioUrl: t.previewAudioUrl ?? t.cdnAudioUrl,
+    audioUrl: opts.isOwned ? t.cdnAudioUrl : (t.previewAudioUrl ?? t.cdnAudioUrl),
   };
 }
 
 export default async function Home() {
   const now = new Date();
+  const user = await getCurrentUser();
 
   const sponsoredRows = await prisma.promotionTrack.findMany({
     where: {
@@ -51,11 +53,6 @@ export default async function Home() {
     },
     take: 2,
   });
-
-  const sponsored: TrackCardModel[] = sponsoredRows.map((r) => ({
-    ...toCardModel(r.track),
-    isSponsored: true,
-  }));
 
   const top = await prisma.purchase.groupBy({
     by: ["trackId"],
@@ -73,10 +70,6 @@ export default async function Home() {
     : [];
 
   const topById = new Map(topTracksRaw.map((t) => [t.id, t] as const));
-  const topSellers: TrackCardModel[] = topIds
-    .map((id) => topById.get(id))
-    .filter(Boolean)
-    .map((t) => toCardModel(t!));
 
   const fallbackFavoritesRaw = await prisma.track.findMany({
     include: { artist: { select: { name: true } } },
@@ -84,7 +77,6 @@ export default async function Home() {
     take: 2,
   });
 
-  const fallbackFavorites: TrackCardModel[] = fallbackFavoritesRaw.map(toCardModel);
 
   const forYouRaw = await prisma.track.findMany({
     include: { artist: { select: { name: true } } },
@@ -92,7 +84,45 @@ export default async function Home() {
     take: 2,
   });
 
-  const forYou: TrackCardModel[] = forYouRaw.map(toCardModel);
+  const ownedSet = new Set<string>();
+  if (user) {
+    const ids = Array.from(
+      new Set(
+        [
+          ...sponsoredRows.map((r) => r.track.id),
+          ...topIds,
+          ...fallbackFavoritesRaw.map((t) => t.id),
+          ...forYouRaw.map((t) => t.id),
+        ].filter(Boolean),
+      ),
+    );
+
+    if (ids.length) {
+      const owned = await prisma.userLibrary.findMany({
+        where: { userId: user.id, trackId: { in: ids } },
+        select: { trackId: true },
+      });
+      for (const row of owned) ownedSet.add(row.trackId);
+    }
+  }
+
+  const sponsored: TrackCardModel[] = sponsoredRows.map((r) => ({
+    ...toCardModel(r.track, { isOwned: ownedSet.has(r.track.id) }),
+    isSponsored: true,
+  }));
+
+  const topSellers: TrackCardModel[] = topIds
+    .map((id) => topById.get(id))
+    .filter(Boolean)
+    .map((t) => toCardModel(t!, { isOwned: ownedSet.has(t!.id) }));
+
+  const fallbackFavorites: TrackCardModel[] = fallbackFavoritesRaw.map((t) =>
+    toCardModel(t, { isOwned: ownedSet.has(t.id) }),
+  );
+
+  const forYou: TrackCardModel[] = forYouRaw.map((t) =>
+    toCardModel(t, { isOwned: ownedSet.has(t.id) }),
+  );
 
   return (
     <div className="bg-gradient-to-b from-white to-zinc-50 dark:from-zinc-950 dark:to-zinc-950">

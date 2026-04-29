@@ -2,7 +2,9 @@
 
 import { motion } from "framer-motion";
 import { BadgePercent, Heart, Play, Plus, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useSyncExternalStore } from "react";
+import { useState } from "react";
 
 import { usePlayer } from "@/components/PlayerProvider";
 
@@ -29,6 +31,8 @@ type TrackCardProps = {
   onPlay?: (trackId: string) => void;
   onAddToLibrary?: (trackId: string) => void;
   canAddToLibrary?: boolean;
+  showAddToLibrary?: boolean;
+  isOwned?: boolean;
 };
 
 function formatTRYFromCents(cents: number) {
@@ -120,11 +124,16 @@ export default function TrackCard({
   onPlay,
   onAddToLibrary,
   canAddToLibrary = false,
+  showAddToLibrary = true,
+  isOwned,
 }: TrackCardProps) {
+  const router = useRouter();
   const player = usePlayer();
   const hasDiscount = track.effectivePriceCents < track.basePriceCents;
   const isAvailable = track.isAvailable ?? true;
   const addLocked = !canAddToLibrary;
+  const [adding, setAdding] = useState(false);
+  const [owned, setOwned] = useState(Boolean(isOwned));
 
   const favorites = useSyncExternalStore(subscribeFavorites, readFavorites, () => EMPTY_FAVORITES);
   const isFavorite = favorites.includes(track.id);
@@ -246,24 +255,61 @@ export default function TrackCard({
           <span className="min-w-0 truncate">Dinle</span>
         </motion.button>
 
-        <motion.button
-          type="button"
-          disabled={!isAvailable || addLocked}
-          aria-disabled={!isAvailable || addLocked}
-          onClick={() => {
-            if (!isAvailable || addLocked) return;
-            onAddToLibrary?.(track.id);
-          }}
-          className={
-            "inline-flex w-full min-w-0 items-center justify-center gap-2 rounded-full bg-zinc-950 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 " +
-            "disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
-          }
-          title={addLocked ? "Misafir modunda kütüphaneye eklenmez" : !isAvailable ? "Satış kapalı" : undefined}
-        >
-          <Plus className="h-4 w-4 shrink-0" />
-          <span className="min-w-0 truncate sm:hidden">Ekle</span>
-          <span className="hidden min-w-0 truncate sm:inline">Kütüphanene Ekle</span>
-        </motion.button>
+        {showAddToLibrary ? (
+          <motion.button
+            type="button"
+            disabled={!isAvailable || addLocked || adding || owned}
+            aria-disabled={!isAvailable || addLocked || adding || owned}
+            onClick={async () => {
+              if (!isAvailable || addLocked || adding || owned) return;
+
+              if (onAddToLibrary) {
+                onAddToLibrary(track.id);
+                return;
+              }
+
+              setAdding(true);
+              try {
+                const res = await fetch("/api/library", {
+                  method: "POST",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({ trackId: track.id }),
+                });
+
+                if (res.status === 401) {
+                  router.push("/login");
+                  return;
+                }
+
+                if (res.ok) {
+                  setOwned(true);
+                  router.refresh();
+                }
+              } finally {
+                setAdding(false);
+              }
+            }}
+            className={
+              "inline-flex w-full min-w-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-zinc-950 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 " +
+              "disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
+            }
+            title={
+              addLocked
+                ? "Misafir modunda kütüphaneye eklenmez"
+                : !isAvailable
+                  ? "Satış kapalı"
+                  : owned
+                    ? "Alındı"
+                  : adding
+                    ? "Ekleniyor"
+                    : undefined
+            }
+          >
+            <Plus className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 truncate sm:hidden">Ekle</span>
+            <span className="hidden min-w-0 truncate sm:inline">{owned ? "Alındı" : "Kütüphanene Ekle"}</span>
+          </motion.button>
+        ) : null}
       </div>
 
       <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100">

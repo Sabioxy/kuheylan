@@ -4,14 +4,21 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite" // Switch to "postgresql" when DATABASE_URL points to Postgres
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum ArtistStatus {
   STARTER
   MID
   PREMIUM
+}
+
+enum UserRole {
+  USER
+  ARTIST
+  ADMIN
 }
 
 model Artist {
@@ -23,6 +30,9 @@ model Artist {
 
   // Updated on each sale payout (business rule: STARTER => 7% commission, else 10%)
   balanceCents Int @default(0)
+
+  // Optional artist account (role=ARTIST)
+  user User?
 
   albums    Album[]
   tracks    Track[]
@@ -93,6 +103,12 @@ model Track {
 
 model User {
   id String @id @default(cuid())
+
+  role UserRole @default(USER)
+
+  // If role=ARTIST, this user can manage a single Artist.
+  artist   Artist? @relation(fields: [artistId], references: [id], onDelete: SetNull)
+  artistId String? @unique
 
   // Login identity
   email    String @unique

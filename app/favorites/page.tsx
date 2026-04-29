@@ -1,6 +1,7 @@
 import type { TrackCardModel } from "@/components/TrackCard";
 
 import HomeFavoritesSection from "@/components/HomeFavoritesSection";
+import { getCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ function toCardModel(t: {
   cdnAudioUrl: string;
   previewAudioUrl: string | null;
   artist: { name: string };
-}): TrackCardModel {
+}, opts: { isOwned: boolean }): TrackCardModel {
   return {
     id: t.id,
     name: t.name,
@@ -28,18 +29,29 @@ function toCardModel(t: {
     effectivePriceCents: t.effectivePriceCents,
     isAvailable: t.isAvailable,
     imageUrl: t.coverImageUrl ?? undefined,
-    audioUrl: t.previewAudioUrl ?? t.cdnAudioUrl,
+    audioUrl: opts.isOwned ? t.cdnAudioUrl : (t.previewAudioUrl ?? t.cdnAudioUrl),
   };
 }
 
 export default async function FavoritesPage() {
+  const user = await getCurrentUser();
+
   const fallbackRaw = await prisma.track.findMany({
     include: { artist: { select: { name: true } } },
     orderBy: { createdAt: "desc" },
     take: 6,
   });
 
-  const fallback = fallbackRaw.map(toCardModel);
+  const ownedSet = new Set<string>();
+  if (user && fallbackRaw.length) {
+    const owned = await prisma.userLibrary.findMany({
+      where: { userId: user.id, trackId: { in: fallbackRaw.map((t) => t.id) } },
+      select: { trackId: true },
+    });
+    for (const row of owned) ownedSet.add(row.trackId);
+  }
+
+  const fallback = fallbackRaw.map((t) => toCardModel(t, { isOwned: ownedSet.has(t.id) }));
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">

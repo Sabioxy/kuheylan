@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200">
+  <defs>
+    <radialGradient id="g" cx="65%" cy="25%" r="80%">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.18"/>
+      <stop offset="55%" stop-color="#0f172a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="1200" fill="#ffffff"/>
+  <rect width="1200" height="1200" fill="url(#g)"/>
+  <text x="80" y="180" font-size="72" font-family="ui-sans-serif, system-ui" fill="#0f172a" opacity="0.9">Demo Artist 2</text>
+  <text x="80" y="270" font-size="44" font-family="ui-sans-serif, system-ui" fill="#0f172a" opacity="0.7">Demo Cover</text>
+</svg>

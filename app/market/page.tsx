@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 
 import TrackCard, { type TrackCardModel } from "@/components/TrackCard";
+import { getCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ function toCardModel(t: {
   previewAudioUrl: string | null;
   artist: { name: string };
   promotions: Array<{ promotionId: string }>;
-}): TrackCardModel {
+}, opts: { isOwned: boolean }): TrackCardModel {
   return {
     id: t.id,
     name: t.name,
@@ -32,7 +33,7 @@ function toCardModel(t: {
     isAvailable: t.isAvailable,
     isSponsored: t.promotions.length > 0,
     imageUrl: t.coverImageUrl ?? undefined,
-    audioUrl: t.previewAudioUrl ?? t.cdnAudioUrl,
+    audioUrl: opts.isOwned ? t.cdnAudioUrl : (t.previewAudioUrl ?? t.cdnAudioUrl),
   };
 }
 
@@ -52,6 +53,7 @@ export default async function MarketPage({
   searchParams?: MarketSearchParams | Promise<MarketSearchParams>;
 }) {
   const now = new Date();
+  const user = await getCurrentUser();
 
   const sp = await Promise.resolve(searchParams ?? {});
 
@@ -154,7 +156,16 @@ export default async function MarketPage({
     take: 30,
   });
 
-  const products = tracks.map(toCardModel);
+  const ownedSet = new Set<string>();
+  if (user && tracks.length) {
+    const owned = await prisma.userLibrary.findMany({
+      where: { userId: user.id, trackId: { in: tracks.map((t) => t.id) } },
+      select: { trackId: true },
+    });
+    for (const row of owned) ownedSet.add(row.trackId);
+  }
+
+  const products = tracks.map((t) => toCardModel(t, { isOwned: ownedSet.has(t.id) }));
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
@@ -286,9 +297,14 @@ export default async function MarketPage({
               </div>
             </div>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
               {products.map((p) => (
-                <TrackCard key={p.id} track={p} canAddToLibrary={false} />
+                <TrackCard
+                  key={p.id}
+                  track={p}
+                  canAddToLibrary={Boolean(user)}
+                  isOwned={ownedSet.has(p.id)}
+                />
               ))}
             </div>
           </div>

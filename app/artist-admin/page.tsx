@@ -12,7 +12,7 @@ export default async function ArtistAdminPage() {
 
   const artist = await prisma.artist.findUnique({
     where: { id: user.artistId },
-    select: { id: true, name: true, balanceCents: true },
+    select: { id: true, name: true, bio: true, profileImageUrl: true, balanceCents: true },
   });
 
   if (!artist) redirect("/");
@@ -80,7 +80,10 @@ export default async function ArtistAdminPage() {
 
       <div className="mt-6">
         <ArtistStudio 
-          artistId={artist.id} 
+          artistId={artist.id}
+          artistName={artist.name}
+          artistBio={artist.bio ?? ""}
+          artistProfileImageUrl={artist.profileImageUrl ?? ""}
           albums={albums} 
           tracks={tracks} 
           stats={{

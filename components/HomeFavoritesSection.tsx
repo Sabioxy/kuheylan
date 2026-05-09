@@ -192,7 +192,7 @@ export default function HomeFavoritesSection({
         ) : null}
 
         {shown.map((t) => (
-          <TrackCard key={t.id} track={t} canAddToLibrary={false} />
+          <TrackCard key={t.id} track={t} canAddToLibrary={true} />
         ))}
       </div>
     </section>

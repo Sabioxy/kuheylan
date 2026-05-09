@@ -80,6 +80,7 @@ model Track {
 
   // Stock never decreases; selling can be disabled by artist.
   isAvailable Boolean @default(true)
+  isSponsored Boolean @default(false)
 
   album   Album  @relation(fields: [albumId], references: [id], onDelete: Cascade)
   albumId String

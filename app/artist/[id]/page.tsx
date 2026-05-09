@@ -1,15 +1,16 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Music, Users, Calendar, Mail } from "lucide-react";
+import { ArrowLeft, Music, Users, Calendar, Mail, Disc } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 import TrackCard, { type TrackCardModel } from "@/components/TrackCard";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({ params }: { params: { id: string } }) {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const artist = await prisma.artist.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: { name: true, bio: true },
   });
 
@@ -21,13 +22,17 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   };
 }
 
-export default async function ArtistDetailPage({ params }: { params: { id: string } }) {
+export default async function ArtistDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const artist = await prisma.artist.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       tracks: {
         where: { isAvailable: true },
         include: { artist: { select: { name: true } } },
+        orderBy: { createdAt: "desc" },
+      },
+      albums: {
         orderBy: { createdAt: "desc" },
       },
       _count: {
@@ -39,7 +44,16 @@ export default async function ArtistDetailPage({ params }: { params: { id: strin
   if (!artist) notFound();
 
   const user = await getCurrentUser();
-  
+
+  const ownedSet = new Set<string>();
+  if (user && artist.tracks.length > 0) {
+    const owned = await prisma.userLibrary.findMany({
+      where: { userId: user.id, trackId: { in: artist.tracks.map(t => t.id) } },
+      select: { trackId: true },
+    });
+    owned.forEach(o => ownedSet.add(o.trackId));
+  }
+
   const tracks: TrackCardModel[] = artist.tracks.map((t) => ({
     id: t.id,
     name: t.name,
@@ -50,7 +64,9 @@ export default async function ArtistDetailPage({ params }: { params: { id: strin
     effectivePriceCents: t.effectivePriceCents,
     isAvailable: t.isAvailable,
     imageUrl: t.coverImageUrl ?? undefined,
-    audioUrl: t.previewAudioUrl ?? t.cdnAudioUrl,
+    audioUrl: ownedSet.has(t.id) ? t.cdnAudioUrl : (t.previewAudioUrl ?? t.cdnAudioUrl),
+    artistId: id,
+    isOwned: ownedSet.has(t.id),
   }));
 
   return (
@@ -132,6 +148,42 @@ export default async function ArtistDetailPage({ params }: { params: { id: strin
         </main>
         
         <aside className="lg:col-span-4 space-y-6">
+          <div className="rounded-3xl border border-zinc-200/60 bg-white/70 p-6 shadow-sm backdrop-blur dark:border-white/10 dark:bg-zinc-900/40">
+            <h3 className="font-semibold text-zinc-950 dark:text-zinc-50">Albümler</h3>
+            <div className="mt-4 space-y-4">
+              {artist.albums.length > 0 ? (
+                artist.albums.map((album) => (
+                  <Link 
+                    key={album.id} 
+                    href={`/album/${album.id}`}
+                    className="flex items-center gap-3 group"
+                  >
+                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-white/5">
+                      {album.coverUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={album.coverUrl} alt={album.name} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                          <Disc className="h-6 w-6 text-zinc-300 dark:text-zinc-600" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        {album.name}
+                      </div>
+                      <div className="text-[10px] text-zinc-500 uppercase tracking-tight">
+                        {album.releaseAt ? new Date(album.releaseAt).getFullYear() : "Albüm"}
+                      </div>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">Henüz albüm bulunmuyor.</p>
+              )}
+            </div>
+          </div>
+          
           <div className="rounded-3xl border border-zinc-200/60 bg-white/70 p-6 shadow-sm backdrop-blur dark:border-white/10 dark:bg-zinc-900/40">
             <h3 className="font-semibold text-zinc-950 dark:text-zinc-50">Sanatçı Hakkında</h3>
             <div className="mt-4 space-y-4">

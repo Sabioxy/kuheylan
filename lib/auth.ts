@@ -1,40 +1,24 @@
-import { createHash, randomBytes, scrypt as _scrypt, timingSafeEqual } from "crypto";
-import { promisify } from "util";
+import { createHash, randomBytes } from "crypto";
 
-const scrypt = promisify(_scrypt);
-
-// Cookie names must be "token"-safe; avoid characters like ':' to prevent invalid Set-Cookie headers.
+// Cookie names must be "token"-safe
 export const SESSION_COOKIE = "kuheylan_session";
 
+/**
+ * Şifreleme devre dışı bırakıldı. Şifreyi olduğu gibi döndürür.
+ */
 export async function hashPassword(password: string) {
-  const salt = randomBytes(16);
-  const key = (await scrypt(password, salt, 64)) as Buffer;
-
-  return `s2:${salt.toString("base64")}:${key.toString("base64")}`;
+  return password;
 }
 
+/**
+ * Düz metin şifre karşılaştırması yapar.
+ */
 export async function verifyPassword(password: string, stored: string) {
-  if (!stored || !stored.startsWith("s2:")) return false;
+  if (!stored) return false;
 
-  const parts = stored.split(":");
-  if (parts.length !== 3) return false;
-
-  const saltB64 = parts[1];
-  const keyB64 = parts[2];
-
-  let salt: Buffer;
-  let expected: Buffer;
-  try {
-    salt = Buffer.from(saltB64, "base64");
-    expected = Buffer.from(keyB64, "base64");
-  } catch {
-    return false;
-  }
-
-  const actual = (await scrypt(password, salt, expected.length)) as Buffer;
-
-  if (actual.length !== expected.length) return false;
-  return timingSafeEqual(actual, expected);
+  // Eğer hala eski hash formatında bir şifre varsa ve yeni sisteme geçildiyse
+  // kullanıcıyı Prisma Studio üzerinden güncellemen gerekebilir.
+  return password === stored;
 }
 
 export function newSessionToken() {

@@ -15,9 +15,10 @@ export const dynamic = "force-dynamic";
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: { q?: string };
+  searchParams: Promise<{ q?: string }>;
 }) {
-  const query = typeof searchParams.q === "string" ? searchParams.q.trim() : "";
+  const sp = await searchParams;
+  const query = typeof sp.q === "string" ? sp.q.trim() : "";
   if (!query) {
     redirect("/market");
   }

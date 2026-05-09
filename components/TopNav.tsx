@@ -10,10 +10,11 @@ export default async function TopNav() {
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-200/60 bg-white/70 backdrop-blur dark:border-white/10 dark:bg-zinc-950/40">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
-        <Link href="/" className="inline-flex items-center gap-2">
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950">
-            <Music2 className="h-4 w-4" />
-          </span>
+        <Link href="/" className="inline-flex items-center gap-3 group">
+          <div className="h-9 w-9 shrink-0 overflow-hidden rounded-xl border border-zinc-200 dark:border-white/10 shadow-sm transition-transform group-hover:scale-105">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/logo.jpg" alt="Küheylan Logo" className="h-full w-full object-cover" />
+          </div>
           <div className="leading-tight">
             <div className="text-sm font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
               Küheylan

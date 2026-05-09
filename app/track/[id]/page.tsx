@@ -16,9 +16,10 @@ function formatTRYFromCents(cents: number) {
   }).format(value);
 }
 
-export async function generateMetadata({ params }: { params: { id: string } }) {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const track = await prisma.track.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: { name: true, artist: { select: { name: true } } },
   });
 
@@ -30,9 +31,10 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   };
 }
 
-export default async function TrackDetailPage({ params }: { params: { id: string } }) {
+export default async function TrackDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const track = await prisma.track.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       artist: true,
       album: true,

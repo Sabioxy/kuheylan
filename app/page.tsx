@@ -60,6 +60,12 @@ export default async function Home() {
     take: 2,
   });
 
+  const directSponsoredTracks = await (prisma.track as any).findMany({
+    where: { isSponsored: true, isAvailable: true },
+    include: { artist: { select: { id: true, name: true } } },
+    take: 4,
+  }) as any[];
+
   const top = await prisma.purchase.groupBy({
     by: ["trackId"],
     _count: { trackId: true },
@@ -112,10 +118,16 @@ export default async function Home() {
     }
   }
 
-  const sponsored: TrackCardModel[] = sponsoredRows.map((r) => ({
-    ...toCardModel(r.track, { isOwned: ownedSet.has(r.track.id) }),
-    isSponsored: true,
-  }));
+  const sponsored: TrackCardModel[] = [
+    ...sponsoredRows.map((r) => ({
+      ...toCardModel(r.track, { isOwned: ownedSet.has(r.track.id) }),
+      isSponsored: true,
+    })),
+    ...directSponsoredTracks.map((t) => ({
+      ...toCardModel(t, { isOwned: ownedSet.has(t.id) }),
+      isSponsored: true,
+    }))
+  ].slice(0, 4); // Limit to 4 total sponsored items
 
   const topSellers: TrackCardModel[] = topIds
     .map((id) => topById.get(id))
@@ -131,66 +143,82 @@ export default async function Home() {
   );
 
   return (
-    <div className="bg-gradient-to-b from-white to-zinc-50 dark:from-zinc-950 dark:to-zinc-950">
-      {/* HERO / ANA EKRAN */}
-      <section className="relative">
-        <div className="mx-auto max-w-6xl px-6 pt-14 pb-10 sm:pt-20">
-          <div className="grid gap-10 lg:grid-cols-12 lg:items-end">
-            <div className="lg:col-span-7">
-              <div className="text-xs font-medium tracking-wide text-zinc-600 dark:text-zinc-300">
-                Dijital Müzik Lisansı • B2C Pazaryeri
-              </div>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50 sm:text-5xl">
-                Küheylan
-              </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-zinc-600 dark:text-zinc-300">
-                Abonelik değil. Her parça bir lisans: satın al, ömür boyu kütüphanende kalsın.
-              </p>
+    <div className="relative min-h-screen">
+      {/* BACKGROUND IMAGE WITH FADE */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[800px] overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img 
+          src="/images/home-bg.png" 
+          alt="Background" 
+          className="h-full w-full object-cover opacity-60 dark:opacity-100"
+          style={{ 
+            maskImage: 'linear-gradient(to bottom, black 0%, black 30%, transparent 90%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 30%, transparent 90%)' 
+          }}
+        />
+        {/* Renk ve Parlama Katmanları */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/20 to-white dark:via-zinc-950/40 dark:to-zinc-950" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.2),transparent_70%)]" />
+      </div>
 
-              <div className="mt-7 flex flex-wrap items-center gap-3">
-                <Link
-                  href="/market"
-                  className="inline-flex items-center justify-center rounded-full bg-zinc-950 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
-                >
-                  Satış Yerine Git
-                </Link>
-                <ScrollToMarketplace targetId="home-market" />
-              </div>
-
-              <div className="mt-10 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-zinc-200/60 bg-white/70 p-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400">Komisyon</div>
-                  <div className="mt-1 text-sm font-semibold">%10 (Yeni: %7)</div>
+      <div className="relative z-10">
+        {/* HERO / ANA EKRAN */}
+        <section className="relative">
+          <div className="mx-auto max-w-6xl px-6 pt-14 pb-10 sm:pt-20">
+            <div className="grid gap-10 lg:grid-cols-12 lg:items-end">
+              <div className="lg:col-span-7">
+                <div className="text-xs font-medium tracking-wide text-zinc-600 dark:text-zinc-300">
+                  Dijital Müzik Lisansı • B2C Pazaryeri
                 </div>
-                <div className="rounded-2xl border border-zinc-200/60 bg-white/70 p-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400">Teslimat</div>
-                  <div className="mt-1 text-sm font-semibold">Anında</div>
-                </div>
-                <div className="rounded-2xl border border-zinc-200/60 bg-white/70 p-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400">Erişim</div>
-                  <div className="mt-1 text-sm font-semibold">Ömür boyu</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="lg:col-span-5">
-              <div className="rounded-3xl border border-zinc-200/60 bg-white/70 p-5 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
-                <div className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">Sponsorlu</div>
-                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
-                  Vitrinlenen parçalar.
+                <h1 className="mt-4 text-4xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50 sm:text-5xl">
+                  Küheylan
+                </h1>
+                <p className="mt-4 max-w-2xl text-base leading-7 text-zinc-600 dark:text-zinc-300">
+                  Abonelik değil. Her parça bir lisans: satın al, ömür boyu kütüphanende kalsın.
                 </p>
-                <div className="mt-4 grid gap-4">
-                  {sponsored.map((t) => (
-                    <TrackCard key={t.id} track={t} canAddToLibrary={Boolean(user)} />
-                  ))}
+
+                <div className="mt-7 flex flex-wrap items-center gap-3">
+                  <Link
+                    href="/market"
+                    className="inline-flex items-center justify-center rounded-full bg-zinc-950 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
+                  >
+                    Satış Yerine Git
+                  </Link>
+                  <ScrollToMarketplace targetId="home-market" />
+                </div>
+
+                <div className="mt-10 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-zinc-200/60 bg-white/70 p-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
+                    <div className="text-xs text-zinc-500 dark:text-zinc-400">Komisyon</div>
+                    <div className="mt-1 text-sm font-semibold">%10 (Yeni: %7)</div>
+                  </div>
+                  <div className="rounded-2xl border border-zinc-200/60 bg-white/70 p-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
+                    <div className="text-xs text-zinc-500 dark:text-zinc-400">Teslimat</div>
+                    <div className="mt-1 text-sm font-semibold">Anında</div>
+                  </div>
+                  <div className="rounded-2xl border border-zinc-200/60 bg-white/70 p-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
+                    <div className="text-xs text-zinc-500 dark:text-zinc-400">Erişim</div>
+                    <div className="mt-1 text-sm font-semibold">Ömür boyu</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-5">
+                <div className="rounded-3xl border border-zinc-200/60 bg-white/70 p-5 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
+                  <div className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">Sponsorlu</div>
+                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
+                    Vitrinlenen parçalar.
+                  </p>
+                  <div className="mt-4 grid gap-4">
+                    {sponsored.map((t) => (
+                      <TrackCard key={t.id} track={t} canAddToLibrary={Boolean(user)} />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] bg-[radial-gradient(ellipse_at_top,rgba(24,24,27,0.06),transparent_60%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.08),transparent_60%)]" />
-      </section>
+        </section>
 
       {/* AŞAĞI KAYDIRINCA AÇILAN "ANA SAYFA SATIŞ" */}
       <section id="home-market" className="mx-auto max-w-6xl px-6 pt-12 pb-20">
@@ -245,6 +273,7 @@ export default async function Home() {
           </footer>
         </Reveal>
       </section>
+      </div>
     </div>
   );
 }

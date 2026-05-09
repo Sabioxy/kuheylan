@@ -4,6 +4,9 @@ import { useState } from "react";
 
 type Props = {
   artistId: string;
+  artistName: string;
+  artistBio: string;
+  artistProfileImageUrl: string;
   albums: { id: string; name: string; coverUrl: string | null; releaseAt: string | null }[];
   tracks: {
     id: string;
@@ -50,9 +53,13 @@ const buttonClass =
   "inline-flex items-center justify-center rounded-full bg-zinc-950 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 " +
   "disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100";
 
-export function ArtistStudio({ artistId, albums, tracks, stats }: Props) {
+export function ArtistStudio({ artistId, artistName: initialName, artistBio: initialBio, artistProfileImageUrl: initialImg, albums, tracks, stats }: Props) {
   const [albumList, setAlbumList] = useState(albums);
   const [trackList, setTrackList] = useState(tracks);
+
+  const [profileName, setProfileName] = useState(initialName);
+  const [profileBio, setProfileBio] = useState(initialBio);
+  const [profileImg, setProfileImg] = useState(initialImg);
 
   const [albumName, setAlbumName] = useState("");
   const [albumCoverUrl, setAlbumCoverUrl] = useState("");
@@ -113,6 +120,27 @@ export function ArtistStudio({ artistId, albums, tracks, stats }: Props) {
     setResult("Albüm oluşturuldu. Listeye düşmesi için sayfayı yenile.");
   }
 
+  async function saveProfile() {
+    setResult("");
+    const res = await fetch(`/api/studio/artist/${artistId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: profileName,
+        bio: profileBio,
+        profileImageUrl: profileImg,
+      }),
+    });
+
+    if (!res.ok) {
+      const json: unknown = await res.json().catch(() => ({}));
+      setResult(`Profil hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
+      return;
+    }
+
+    setResult("Profil güncellendi.");
+  }
+
   function isoToYmd(iso: string | null): string {
     if (!iso) return "";
     const d = new Date(iso);
@@ -162,6 +190,27 @@ export function ArtistStudio({ artistId, albums, tracks, stats }: Props) {
       setAlbumList((prev) => prev.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)));
     }
     setResult("Albüm güncellendi.");
+  }
+
+  async function deleteAlbum() {
+    if (!editAlbumId) return;
+    if (!confirm("Bu albümü ve içindeki tüm şarkıları silmek istediğinize emin misiniz? (Satın alınan şarkılar varsa silinemez)")) return;
+
+    setResult("");
+    const res = await fetch(`/api/studio/album/${editAlbumId}`, { method: "DELETE" });
+    const json: unknown = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      setResult(`Albüm silme hata: ${getErrorMessage(json) ?? "Bilinmeyen"}`);
+      return;
+    }
+
+    setAlbumList((prev) => prev.filter((x) => x.id !== editAlbumId));
+    setTrackList((prev) => prev.filter((x) => x.albumId !== editAlbumId));
+    setEditAlbumId("");
+    setEditAlbumName("");
+    setEditAlbumCoverUrl("");
+    setResult("Albüm ve şarkıları silindi.");
   }
 
   async function createTrack() {
@@ -257,6 +306,26 @@ export function ArtistStudio({ artistId, albums, tracks, stats }: Props) {
     setResult("Şarkı güncellendi.");
   }
 
+  async function deleteTrack() {
+    if (!editTrackId) return;
+    if (!confirm("Bu şarkıyı kalıcı olarak silmek istediğinize emin misiniz? (Satın alan kullanıcılar varsa silinemez)")) return;
+
+    setResult("");
+    const res = await fetch(`/api/studio/track/${editTrackId}`, { method: "DELETE" });
+    const json: unknown = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      setResult(`Şarkı silme hata: ${getErrorMessage(json) ?? "Bilinmeyen"}`);
+      return;
+    }
+
+    setTrackList((prev) => prev.filter((x) => x.id !== editTrackId));
+    setEditTrackId("");
+    setEditTrackName("");
+    setEditTrackCoverImageUrl("");
+    setResult("Şarkı silindi.");
+  }
+
   return (
     <div className="space-y-10">
       {stats && (
@@ -313,33 +382,64 @@ export function ArtistStudio({ artistId, albums, tracks, stats }: Props) {
         </div>
       )}
 
+      <div className="rounded-lg border p-6 bg-white dark:bg-zinc-900/40">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Profilimi Düzenle</h2>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Adını, biyografini ve profil fotoğrafını buradan güncelleyebilirsin.</p>
+        
+        <div className="mt-6 grid gap-5">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+            <div className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl border border-zinc-200 dark:border-white/10">
+              {profileImg ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={profileImg} alt="Profil" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-zinc-100 text-zinc-400 dark:bg-white/5">Yok</div>
+              )}
+            </div>
+            <div className="flex-1 space-y-4">
+              <div>
+                <label htmlFor="p-name" className={labelClass}>Sanatçı Adı</label>
+                <input id="p-name" className={inputClass} value={profileName} onChange={e => setProfileName(e.target.value)} />
+              </div>
+              <div>
+                <label htmlFor="p-img" className={labelClass}>Profil Fotoğrafı URL</label>
+                <input id="p-img" className={inputClass} value={profileImg} onChange={e => setProfileImg(e.target.value)} placeholder="https://... veya /images/..." />
+              </div>
+            </div>
+          </div>
+          <div>
+            <label htmlFor="p-bio" className={labelClass}>Biyografi</label>
+            <textarea id="p-bio" className={inputClass + " h-24 py-2 resize-none"} value={profileBio} onChange={e => setProfileBio(e.target.value)} placeholder="Kendinden bahset..." />
+          </div>
+          <button className={buttonClass} onClick={saveProfile} disabled={!profileName.trim()}>
+            Profili Kaydet
+          </button>
+        </div>
+      </div>
+
       <div className="rounded-lg border p-4">
         <h2 className="text-lg font-medium">Albüm Ekle</h2>
 
         <div className="mt-4 grid gap-4">
-          <div>
-            <label htmlFor="album-name" className={labelClass}>
-              Albüm Adı
-            </label>
-            <input
-              id="album-name"
-              className={inputClass}
-              value={albumName}
-              onChange={(e) => setAlbumName(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="album-cover" className={labelClass}>
-              Cover URL (opsiyonel)
-            </label>
-            <input
-              id="album-cover"
-              className={inputClass}
-              value={albumCoverUrl}
-              onChange={(e) => setAlbumCoverUrl(e.target.value)}
-              placeholder="https://..."
-            />
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-zinc-200 dark:border-white/10">
+              {albumCoverUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={albumCoverUrl} alt="Preview" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-zinc-100 text-zinc-400 dark:bg-white/5">Yok</div>
+              )}
+            </div>
+            <div className="flex-1 space-y-4">
+              <div>
+                <label htmlFor="album-name" className={labelClass}>Albüm Adı</label>
+                <input id="album-name" className={inputClass} value={albumName} onChange={e => setAlbumName(e.target.value)} />
+              </div>
+              <div>
+                <label htmlFor="album-cover" className={labelClass}>Cover URL (opsiyonel)</label>
+                <input id="album-cover" className={inputClass} value={albumCoverUrl} onChange={e => setAlbumCoverUrl(e.target.value)} placeholder="https://..." />
+              </div>
+            </div>
           </div>
 
           <div>
@@ -366,51 +466,39 @@ export function ArtistStudio({ artistId, albums, tracks, stats }: Props) {
         <p className="mt-1 text-sm text-muted-foreground">Var olan bir albümü seçip düzenleyebilirsin.</p>
 
         <div className="mt-4 grid gap-4">
-          <div>
-            <label htmlFor="edit-album" className={labelClass}>
-              Albüm
-            </label>
-            <select
-              id="edit-album"
-              className="mt-2 h-10 w-full rounded-md border bg-background px-3 text-sm"
-              value={editAlbumId}
-              onChange={(e) => onPickEditAlbum(e.target.value)}
-              disabled={!hasAlbums}
-            >
-              <option value="">Albüm seç</option>
-              {albumList.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="edit-album-name" className={labelClass}>
-              Albüm Adı
-            </label>
-            <input
-              id="edit-album-name"
-              className={inputClass}
-              value={editAlbumName}
-              onChange={(e) => setEditAlbumName(e.target.value)}
-              disabled={!editAlbumId}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="edit-album-cover" className={labelClass}>
-              Cover URL (opsiyonel)
-            </label>
-            <input
-              id="edit-album-cover"
-              className={inputClass}
-              value={editAlbumCoverUrl}
-              onChange={(e) => setEditAlbumCoverUrl(e.target.value)}
-              placeholder="/images/... veya https://..."
-              disabled={!editAlbumId}
-            />
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-zinc-200 dark:border-white/10">
+              {editAlbumCoverUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={editAlbumCoverUrl} alt="Preview" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-zinc-100 text-zinc-400 dark:bg-white/5">Yok</div>
+              )}
+            </div>
+            <div className="flex-1 space-y-4">
+              <div>
+                <label htmlFor="edit-album" className={labelClass}>Albüm Seç</label>
+                <select
+                  id="edit-album"
+                  className="mt-2 h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  value={editAlbumId}
+                  onChange={(e) => onPickEditAlbum(e.target.value)}
+                >
+                  <option value="">Seçiniz...</option>
+                  {albumList.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="edit-album-name" className={labelClass}>Albüm Adı</label>
+                <input id="edit-album-name" className={inputClass} value={editAlbumName} onChange={e => setEditAlbumName(e.target.value)} disabled={!editAlbumId} />
+              </div>
+              <div>
+                <label htmlFor="edit-album-cover" className={labelClass}>Cover URL</label>
+                <input id="edit-album-cover" className={inputClass} value={editAlbumCoverUrl} onChange={e => setEditAlbumCoverUrl(e.target.value)} placeholder="/images/... veya https://..." disabled={!editAlbumId} />
+              </div>
+            </div>
           </div>
 
           <div>
@@ -427,9 +515,14 @@ export function ArtistStudio({ artistId, albums, tracks, stats }: Props) {
             />
           </div>
 
-          <button className={buttonClass} onClick={saveAlbumEdits} disabled={!editAlbumId.trim() || !editAlbumName.trim()}>
-            Albümü Kaydet
-          </button>
+          <div className="flex gap-3">
+            <button className={buttonClass + " flex-1"} onClick={saveAlbumEdits} disabled={!editAlbumId || !editAlbumName.trim()}>
+              Albümü Kaydet
+            </button>
+            <button className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20" onClick={deleteAlbum} disabled={!editAlbumId}>
+              Albümü Sil
+            </button>
+          </div>
         </div>
       </div>
 
@@ -461,16 +554,25 @@ export function ArtistStudio({ artistId, albums, tracks, stats }: Props) {
             ) : null}
           </div>
 
-          <div>
-            <label htmlFor="track-name" className={labelClass}>
-              Şarkı Adı
-            </label>
-            <input
-              id="track-name"
-              className={inputClass}
-              value={trackName}
-              onChange={(e) => setTrackName(e.target.value)}
-            />
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-zinc-200 dark:border-white/10">
+              {trackCoverImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={trackCoverImageUrl} alt="Preview" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-zinc-100 text-zinc-400 dark:bg-white/5">Yok</div>
+              )}
+            </div>
+            <div className="flex-1 space-y-4">
+              <div>
+                <label htmlFor="track-name" className={labelClass}>Şarkı Adı</label>
+                <input id="track-name" className={inputClass} value={trackName} onChange={e => setTrackName(e.target.value)} />
+              </div>
+              <div>
+                <label htmlFor="track-cover" className={labelClass}>Kapak Fotoğraf URL (opsiyonel)</label>
+                <input id="track-cover" className={inputClass} value={trackCoverImageUrl} onChange={e => setTrackCoverImageUrl(e.target.value)} placeholder="/images/... veya https://..." />
+              </div>
+            </div>
           </div>
 
           <div>
@@ -500,19 +602,6 @@ export function ArtistStudio({ artistId, albums, tracks, stats }: Props) {
               value={trackPreviewAudioUrl}
               onChange={(e) => setTrackPreviewAudioUrl(e.target.value)}
               placeholder="/audio/... veya https://..."
-            />
-          </div>
-
-          <div>
-            <label htmlFor="track-cover" className={labelClass}>
-              Kapak Fotoğraf URL (opsiyonel)
-            </label>
-            <input
-              id="track-cover"
-              className={inputClass}
-              value={trackCoverImageUrl}
-              onChange={(e) => setTrackCoverImageUrl(e.target.value)}
-              placeholder="/images/... veya https://..."
             />
           </div>
 
@@ -593,24 +682,39 @@ export function ArtistStudio({ artistId, albums, tracks, stats }: Props) {
         <p className="mt-1 text-sm text-muted-foreground">Var olan bir şarkıyı seçip düzenleyebilirsin.</p>
 
         <div className="mt-4 grid gap-4">
-          <div>
-            <label htmlFor="edit-track" className={labelClass}>
-              Şarkı
-            </label>
-            <select
-              id="edit-track"
-              className="mt-2 h-10 w-full rounded-md border bg-background px-3 text-sm"
-              value={editTrackId}
-              onChange={(e) => onPickEditTrack(e.target.value)}
-              disabled={trackList.length === 0}
-            >
-              <option value="">Şarkı seç</option>
-              {trackList.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-zinc-200 dark:border-white/10">
+              {editTrackCoverImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={editTrackCoverImageUrl} alt="Preview" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-zinc-100 text-zinc-400 dark:bg-white/5">Yok</div>
+              )}
+            </div>
+            <div className="flex-1 space-y-4">
+              <div>
+                <label htmlFor="edit-track" className={labelClass}>Şarkı Seç</label>
+                <select
+                  id="edit-track"
+                  className="mt-2 h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  value={editTrackId}
+                  onChange={(e) => onPickEditTrack(e.target.value)}
+                >
+                  <option value="">Seçiniz...</option>
+                  {trackList.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="edit-track-name" className={labelClass}>Şarkı Adı</label>
+                <input id="edit-track-name" className={inputClass} value={editTrackName} onChange={e => setEditTrackName(e.target.value)} disabled={!editTrackId} />
+              </div>
+              <div>
+                <label htmlFor="edit-track-cover" className={labelClass}>Kapak Fotoğraf URL</label>
+                <input id="edit-track-cover" className={inputClass} value={editTrackCoverImageUrl} onChange={e => setEditTrackCoverImageUrl(e.target.value)} disabled={!editTrackId} />
+              </div>
+            </div>
           </div>
 
           <div>

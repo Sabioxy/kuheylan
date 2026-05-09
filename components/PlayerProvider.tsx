@@ -51,6 +51,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const play = useCallback((t: NowPlaying) => {
     const src = t.audioUrl ? normalizeMediaUrl(t.audioUrl) : undefined;
+    
+    // Reset UI state immediately
+    setCurrentTime(0);
+    setDuration(0);
     setNowPlaying({ ...t, audioUrl: src });
 
     const audio = audioRef.current;

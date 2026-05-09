@@ -3,6 +3,7 @@ import { Heart, LogIn, LogOut, Music2, Store, UserPlus, Search, Settings } from 
 
 import { getCurrentUser } from "@/lib/current-user";
 import CartLink from "./CartLink";
+import NotificationBell from "./NotificationBell";
 
 export default async function TopNav() {
   const user = await getCurrentUser();
@@ -112,6 +113,8 @@ export default async function TopNav() {
           >
             <Heart className="h-4 w-4" /> Favoriler
           </Link>
+
+          {user && <NotificationBell />}
 
           <CartLink />
 

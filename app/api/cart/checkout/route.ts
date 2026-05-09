@@ -85,6 +85,23 @@ export async function POST(req: Request) {
           },
         });
 
+        // Create notification for recipient if it's a gift
+        if (targetUserId !== user.id) {
+          await tx.notification.create({
+            data: {
+              userId: targetUserId,
+              type: "GIFT",
+              title: "Yeni Bir Hediye!",
+              message: `${user.username} sana "${track.name}" şarkısını hediye etti.`,
+              metadata: JSON.stringify({
+                senderUsername: user.username,
+                trackId: track.id,
+                trackName: track.name,
+              }),
+            },
+          });
+        }
+
         await tx.artist.update({
           where: { id: track.artist.id },
           data: { balanceCents: { increment: artistPayoutCents } },

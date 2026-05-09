@@ -14,7 +14,7 @@ function formatTime(totalSeconds: number) {
 }
 
 export default function StickyPlayer() {
-  const { nowPlaying, isPlaying, toggle, currentTime, duration, seekTo } = usePlayer();
+  const { nowPlaying, isPlaying, toggle, currentTime, duration, seekTo, next, previous, hasPlaylist } = usePlayer();
   const [scrub, setScrub] = useState<{ trackId: string | null; value: number } | null>(null);
 
   const title = nowPlaying?.title ?? "Şu an çalan yok";
@@ -42,8 +42,9 @@ export default function StickyPlayer() {
           <div className="flex items-center gap-2">
           <button
             type="button"
-            disabled
-            className="inline-flex h-9 w-9 cursor-not-allowed items-center justify-center rounded-full border border-zinc-200/70 bg-white text-zinc-900 opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50"
+            disabled={!hasPlaylist}
+            onClick={previous}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200/70 bg-white text-zinc-900 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50 dark:hover:bg-white/10"
             aria-label="Geri"
           >
             <SkipBack className="h-4 w-4" />
@@ -51,7 +52,7 @@ export default function StickyPlayer() {
 
           <button
             type="button"
-            disabled={!canControl}
+            disabled={!canControl && !hasPlaylist}
             onClick={toggle}
             className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-zinc-950 text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
             aria-label={isPlaying ? "Duraklat" : "Oynat"}
@@ -62,8 +63,9 @@ export default function StickyPlayer() {
 
           <button
             type="button"
-            disabled
-            className="inline-flex h-9 w-9 cursor-not-allowed items-center justify-center rounded-full border border-zinc-200/70 bg-white text-zinc-900 opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50"
+            disabled={!hasPlaylist}
+            onClick={next}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200/70 bg-white text-zinc-900 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50 dark:hover:bg-white/10"
             aria-label="İleri"
           >
             <SkipForward className="h-4 w-4" />

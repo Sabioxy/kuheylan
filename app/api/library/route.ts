@@ -9,6 +9,34 @@ type Body = {
   trackId?: unknown;
 };
 
+export async function GET() {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const library = await prisma.userLibrary.findMany({
+    where: { userId: user.id },
+    include: {
+      track: {
+        include: {
+          artist: { select: { name: true } },
+        },
+      },
+    },
+    orderBy: { purchasedAt: "desc" },
+  });
+
+  const tracks = library.map((entry) => ({
+    id: entry.track.id,
+    title: entry.track.name,
+    subtitle: entry.track.artist.name,
+    audioUrl: entry.track.cdnAudioUrl,
+  }));
+
+  return NextResponse.json({ tracks });
+}
+
 export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) {

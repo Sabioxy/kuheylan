@@ -4,6 +4,7 @@ import { ArrowLeft, Clock, Music, Tag, User, Play, Plus, BadgePercent, Sparkles 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 import TrackCard, { type TrackCardModel } from "@/components/TrackCard";
+import TrackDetailActions from "@/components/TrackDetailActions";
 
 export const dynamic = "force-dynamic";
 
@@ -183,14 +184,15 @@ export default async function TrackDetailPage({ params }: { params: Promise<{ id
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-3">
-                  <button className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-zinc-200 bg-white px-8 text-sm font-semibold text-zinc-950 transition-colors hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-zinc-50 dark:hover:bg-white/10">
-                    <Play className="h-5 w-5" /> Önizleme Dinle
-                  </button>
-                  <button className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-zinc-950 px-8 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100">
-                    <Plus className="h-5 w-5" /> {isOwned ? "Hediye Olarak Ekle" : "Sepete Ekle"}
-                  </button>
-                </div>
+                <TrackDetailActions 
+                  trackId={track.id}
+                  trackName={track.name}
+                  artistName={track.artist.name}
+                  audioUrl={isOwned ? track.cdnAudioUrl : (track.previewAudioUrl || track.cdnAudioUrl)}
+                  isOwned={isOwned}
+                  isAvailable={track.isAvailable}
+                  canAddToCart={!!user}
+                />
               </div>
               <p className="mt-6 text-xs text-zinc-500 dark:text-zinc-400">
                 Bu lisansı satın alarak parçayı ticari projelerinizde kullanma hakkına sahip olursunuz. 

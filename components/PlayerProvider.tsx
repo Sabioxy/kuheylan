@@ -38,6 +38,9 @@ type PlayerContextValue = {
   pause: () => void;
   toggle: () => void;
   seekTo: (seconds: number) => void;
+  next: () => void;
+  previous: () => void;
+  hasPlaylist: boolean;
 };
 
 const PlayerContext = createContext<PlayerContextValue | null>(null);
@@ -48,6 +51,23 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [playlist, setPlaylist] = useState<NowPlaying[]>([]);
+
+  useEffect(() => {
+    // Load library as initial playlist
+    const fetchLibrary = async () => {
+      try {
+        const res = await fetch("/api/library");
+        const data = await res.json();
+        if (data.tracks) {
+          setPlaylist(data.tracks);
+        }
+      } catch (error) {
+        console.error("Failed to fetch library for playlist:", error);
+      }
+    };
+    fetchLibrary();
+  }, []);
 
   const play = useCallback((t: NowPlaying) => {
     const src = t.audioUrl ? normalizeMediaUrl(t.audioUrl) : undefined;
@@ -68,6 +88,20 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (p) p.catch(() => setIsPlaying(false));
     setIsPlaying(true);
   }, []);
+
+  const next = useCallback(() => {
+    if (playlist.length === 0) return;
+    const currentIndex = nowPlaying ? playlist.findIndex(t => t.id === nowPlaying.id) : -1;
+    const nextIndex = (currentIndex + 1) % playlist.length;
+    play(playlist[nextIndex]);
+  }, [nowPlaying, playlist, play]);
+
+  const previous = useCallback(() => {
+    if (playlist.length === 0) return;
+    const currentIndex = nowPlaying ? playlist.findIndex(t => t.id === nowPlaying.id) : -1;
+    const prevIndex = (currentIndex - 1 + playlist.length) % playlist.length;
+    play(playlist[prevIndex]);
+  }, [nowPlaying, playlist, play]);
 
   const pause = useCallback(() => {
     audioRef.current?.pause();
@@ -105,7 +139,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const onEnded = () => setIsPlaying(false);
+    const onEnded = () => {
+      setIsPlaying(false);
+      next();
+    };
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
     const onTimeUpdate = () => setCurrentTime(audio.currentTime || 0);
@@ -134,7 +171,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       audio.removeEventListener("loadedmetadata", onLoadedMetadata);
       audio.removeEventListener("durationchange", onDurationChange);
     };
-  }, []);
+  }, [next]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -147,9 +184,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [nowPlaying?.audioUrl]);
 
+  const hasPlaylist = playlist.length > 0;
+
   const value = useMemo<PlayerContextValue>(
-    () => ({ nowPlaying, isPlaying, currentTime, duration, play, pause, toggle, seekTo }),
-    [nowPlaying, isPlaying, currentTime, duration, play, pause, toggle, seekTo],
+    () => ({ nowPlaying, isPlaying, currentTime, duration, play, pause, toggle, seekTo, next, previous, hasPlaylist }),
+    [nowPlaying, isPlaying, currentTime, duration, play, pause, toggle, seekTo, next, previous, hasPlaylist],
   );
 
   return (

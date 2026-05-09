@@ -4,6 +4,7 @@ import HomeFavoritesSection from "@/components/HomeFavoritesSection";
 import Reveal from "@/components/Reveal";
 import ScrollToMarketplace from "@/components/ScrollToMarketplace";
 import TrackCard, { type TrackCardModel } from "@/components/TrackCard";
+import SponsoredCarousel from "@/components/SponsoredCarousel";
 import { getCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
 
@@ -209,10 +210,8 @@ export default async function Home() {
                   <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
                     Vitrinlenen parçalar.
                   </p>
-                  <div className="mt-4 grid gap-4">
-                    {sponsored.map((t) => (
-                      <TrackCard key={t.id} track={t} canAddToLibrary={Boolean(user)} />
-                    ))}
+                  <div className="mt-4">
+                    <SponsoredCarousel tracks={sponsored} user={user} />
                   </div>
                 </div>
               </div>

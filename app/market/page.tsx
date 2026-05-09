@@ -19,7 +19,7 @@ function toCardModel(t: {
   coverImageUrl: string | null;
   cdnAudioUrl: string;
   previewAudioUrl: string | null;
-  artist: { name: string };
+  artist: { id: string, name: string };
   promotions: Array<{ promotionId: string }>;
 }, opts: { isOwned: boolean }): TrackCardModel {
   return {
@@ -34,8 +34,14 @@ function toCardModel(t: {
     isSponsored: t.promotions.length > 0,
     imageUrl: t.coverImageUrl ?? undefined,
     audioUrl: opts.isOwned ? t.cdnAudioUrl : (t.previewAudioUrl ?? t.cdnAudioUrl),
+    artistId: t.artist.id,
   };
 }
+
+export const metadata = {
+  title: "Müzik Marketi - Küheylan",
+  description: "Tür, BPM ve fiyata göre filtreleyerek hayalindeki müziği bul. Lisansını al ve ömür boyu kullan.",
+};
 
 type MarketSearchParams = {
   sort?: string | string[];
@@ -139,7 +145,7 @@ export default async function MarketPage({
   const tracks = await prisma.track.findMany({
     where,
     include: {
-      artist: { select: { name: true } },
+      artist: { select: { id: true, name: true } },
       promotions: {
         where: {
           isSponsored: true,

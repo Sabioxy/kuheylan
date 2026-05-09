@@ -20,7 +20,7 @@ function toCardModel(t: {
   coverImageUrl: string | null;
   cdnAudioUrl: string;
   previewAudioUrl: string | null;
-  artist: { name: string };
+  artist: { id: string, name: string };
 }): TrackCardModel {
   return {
     id: t.id,
@@ -33,8 +33,14 @@ function toCardModel(t: {
     isAvailable: t.isAvailable,
     imageUrl: t.coverImageUrl ?? undefined,
     audioUrl: t.cdnAudioUrl,
+    artistId: t.artist.id,
   };
 }
+
+export const metadata = {
+  title: "Kütüphanem - Küheylan",
+  description: "Satın aldığın tüm müzik lisansları burada güvende.",
+};
 
 export default async function LibraryPage() {
   const user = await getCurrentUser();
@@ -44,7 +50,7 @@ export default async function LibraryPage() {
     where: { userId: user.id },
     include: {
       track: {
-        include: { artist: { select: { name: true } } },
+        include: { artist: { select: { id: true, name: true } } },
       },
     },
     orderBy: { purchasedAt: "desc" },

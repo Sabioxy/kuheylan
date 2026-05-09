@@ -17,7 +17,7 @@ function toCardModel(t: {
   coverImageUrl: string | null;
   cdnAudioUrl: string;
   previewAudioUrl: string | null;
-  artist: { name: string };
+  artist: { id: string, name: string };
 }, opts: { isOwned: boolean }): TrackCardModel {
   return {
     id: t.id,
@@ -30,14 +30,20 @@ function toCardModel(t: {
     isAvailable: t.isAvailable,
     imageUrl: t.coverImageUrl ?? undefined,
     audioUrl: opts.isOwned ? t.cdnAudioUrl : (t.previewAudioUrl ?? t.cdnAudioUrl),
+    artistId: t.artist.id,
   };
 }
+
+export const metadata = {
+  title: "Favorilerim - Küheylan",
+  description: "Beğendiğin tüm müzikler tek bir yerde.",
+};
 
 export default async function FavoritesPage() {
   const user = await getCurrentUser();
 
   const fallbackRaw = await prisma.track.findMany({
-    include: { artist: { select: { name: true } } },
+    include: { artist: { select: { id: true, name: true } } },
     orderBy: { createdAt: "desc" },
     take: 6,
   });

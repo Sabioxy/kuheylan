@@ -20,7 +20,7 @@ function toCardModel(t: {
   coverImageUrl: string | null;
   cdnAudioUrl: string;
   previewAudioUrl: string | null;
-  artist: { name: string };
+  artist: { id: string, name: string };
 }, opts: { isOwned: boolean }): TrackCardModel {
   return {
     id: t.id,
@@ -33,8 +33,14 @@ function toCardModel(t: {
     isAvailable: t.isAvailable,
     imageUrl: t.coverImageUrl ?? undefined,
     audioUrl: opts.isOwned ? t.cdnAudioUrl : (t.previewAudioUrl ?? t.cdnAudioUrl),
+    artistId: t.artist.id,
   };
 }
+
+export const metadata = {
+  title: "Küheylan | Dijital Müzik Lisans Pazaryeri",
+  description: "Abonelik değil, ömür boyu lisans. Küheylan ile en sevdiğin sanatçıların eserlerine kalıcı olarak sahip ol.",
+};
 
 export default async function Home() {
   const now = new Date();
@@ -49,7 +55,7 @@ export default async function Home() {
       },
     },
     include: {
-      track: { include: { artist: { select: { name: true } } } },
+      track: { include: { artist: { select: { id: true, name: true } } } },
     },
     take: 2,
   });
@@ -65,21 +71,21 @@ export default async function Home() {
   const topTracksRaw = topIds.length
     ? await prisma.track.findMany({
         where: { id: { in: topIds } },
-        include: { artist: { select: { name: true } } },
+        include: { artist: { select: { id: true, name: true } } },
       })
     : [];
 
   const topById = new Map(topTracksRaw.map((t) => [t.id, t] as const));
 
   const fallbackFavoritesRaw = await prisma.track.findMany({
-    include: { artist: { select: { name: true } } },
+    include: { artist: { select: { id: true, name: true } } },
     orderBy: { effectivePriceCents: "asc" },
     take: 2,
   });
 
 
   const forYouRaw = await prisma.track.findMany({
-    include: { artist: { select: { name: true } } },
+    include: { artist: { select: { id: true, name: true } } },
     orderBy: { createdAt: "desc" },
     take: 2,
   });

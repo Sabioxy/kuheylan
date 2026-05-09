@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { BadgePercent, Heart, Play, Plus, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import { useState } from "react";
 
@@ -25,6 +26,7 @@ export type TrackCardModel = {
 
   // Guest can listen to previews.
   audioUrl?: string;
+  artistId?: string;
 };
 
 type TrackCardProps = {
@@ -199,10 +201,20 @@ export default function TrackCard({
               ) : null}
             </div>
 
-            <h3 className="mt-2 truncate text-lg font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
-              {track.name}
-            </h3>
-            <p className="mt-1 truncate text-sm text-zinc-600 dark:text-zinc-300">{track.artistName}</p>
+            <Link href={`/track/${track.id}`}>
+              <h3 className="mt-2 truncate text-lg font-semibold tracking-tight text-zinc-950 transition-colors hover:text-indigo-600 dark:text-zinc-50 dark:hover:text-indigo-400">
+                {track.name}
+              </h3>
+            </Link>
+            {track.artistId ? (
+              <Link href={`/artist/${track.artistId}`}>
+                <p className="mt-1 truncate text-sm text-zinc-600 transition-colors hover:text-indigo-600 dark:text-zinc-300 dark:hover:text-indigo-400">
+                  {track.artistName}
+                </p>
+              </Link>
+            ) : (
+              <p className="mt-1 truncate text-sm text-zinc-600 dark:text-zinc-300">{track.artistName}</p>
+            )}
 
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300">
               {typeof track.bpm === "number" ? (

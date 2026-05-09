@@ -1,54 +1,71 @@
-# Küheylan
+# Küheylan - Dijital Müzik Lisans Pazaryeri
 
-Next.js App Router + Tailwind + Framer Motion + Lucide + Prisma (SQLite).
+Küheylan, sanatçıların müzik lisanslarını doğrudan dinleyicilere sattığı, abonelik tabanlı olmayan, "satın al ve ömür boyu sahip ol" modelini benimseyen modern bir B2C pazaryeri platformudur.
 
-## Kurulum
+## 🚀 Öne Çıkan Özellikler
 
-```bash
-npm install
-```
+- **Müzik Lisanslama Modeli:** Abonelik yerine tek seferlik satın alma ile ömür boyu kullanım hakkı.
+- **Dinamik Ses Oynatıcı:** 
+    - Sahip olunan şarkılar arasında ileri/geri geçiş desteği.
+    - Şarkı bittiğinde otomatik sonraki parçaya geçiş.
+    - Misafirler için önizleme, sahipler için tam sürüm oynatma.
+- **Hediye Sistemi:** Şarkıları diğer kullanıcılara kullanıcı adları üzerinden hediye edebilme.
+- **Bildirim Merkezi:** Hediye alındığında veya önemli güncellemelerde kullanıcıya anlık bildirim (badge desteği ile).
+- **Gelişmiş Filtreleme:** Tür, BPM ve fiyat bazlı arama ve filtreleme seçenekleri.
+- **Panel Yönetimi:**
+    - **Admin Paneli:** Platform geneli istatistikler ve içerik yönetimi.
+    - **Sanatçı Paneli:** Şarkı yükleme, düzenleme ve bakiye takibi.
+- **Modern UI/UX:** Dark mode desteği, premium cam (glassmorphism) efektleri ve akıcı animasyonlar (`framer-motion`).
 
-`.env` içinde SQLite bağlantısı:
+## 🛠️ Teknoloji Yığını
 
-```bash
-DATABASE_URL="file:./dev.db"
-```
+- **Framework:** Next.js (App Router)
+- **Veritabanı:** Prisma (SQLite)
+- **Styling:** Tailwind CSS + Vanilla CSS
+- **Animasyon:** Framer Motion
+- **İkonlar:** Lucide React
+- **Tarih İşlemleri:** date-fns
 
-DB'yi oluştur / güncelle:
+## ⚙️ Kurulum ve Başlatma
 
-```bash
-npm run db:migrate
-```
+1.  **Bağımlılıkları Yükleyin:**
+    ```bash
+    npm install
+    ```
 
-Demo veriyi yükle (lokal DB’yi sıfırlar / destructive):
+2.  **Veritabanı Yapılandırması:**
+    `.env` dosyasında veritabanı yolunu belirtin:
+    ```bash
+    DATABASE_URL="file:./dev.db"
+    ```
 
-```bash
-npm run db:seed
-```
+3.  **Veritabanını Hazırlayın:**
+    ```bash
+    npx prisma db push
+    npx prisma generate
+    ```
 
-## Çalıştırma
+4.  **Demo Verileri Yükleyin (Opsiyonel):**
+    ```bash
+    npm run db:seed
+    ```
 
-```bash
-npm run dev
-```
+5.  **Geliştirme Sunucusunu Başlatın:**
+    ```bash
+    npm run dev
+    ```
 
-Tarayıcı: http://localhost:3000
+Platforma `http://localhost:3000` üzerinden erişebilirsiniz.
 
-## Komutlar
+## 📁 Proje Yapısı
 
-- `npm run lint`
-- `npm run build`
-- `npm run db:generate`
-- `npm run db:studio`
+- `/app`: Sayfa yönlendirmeleri ve API rotaları.
+- `/components`: Yeniden kullanılabilir UI bileşenleri (Player, TopNav, NotificationBell vb.).
+- `/lib`: Paylaşılan kütüphaneler (Prisma client, Auth, Cart vb.).
+- `/prisma`: Veritabanı şeması ve migration dosyaları.
+- `/public`: Statik varlıklar ve görseller.
 
-## Notlar (Windows)
+## ⚠️ Önemli Notlar
 
-`prisma generate` sırasında EPERM/rename hatası alırsan genelde `npm run dev` açıkken Prisma engine dosyaları kilitleniyor.
-Dev server’ı kapatıp `npm run db:generate` çalıştır.
-
-## Hızlı Test Checklist
-
-- `/`, `/market`, `/favorites` açılıyor
-- `/market` filtreleri (genre/bpmMin/available/sponsored) 200 dönüyor
-- Kartta kalp (favori) toggle → refresh sonrası korunuyor
-- `/api/preview-tone?bpm=120&ms=200` → `audio/wav` dönüyor
+- Windows üzerinde `npx prisma generate` çalıştırırken `EPERM` hatası alırsanız, lütfen çalışan `npm run dev` sunucusunu geçici olarak durdurun.
+- Bildirimler her 30 saniyede bir otomatik olarak kontrol edilir.

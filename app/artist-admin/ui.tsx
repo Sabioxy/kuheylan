@@ -94,51 +94,61 @@ export function ArtistStudio({ artistId, artistName: initialName, artistBio: ini
   const [editTrackIsAvailable, setEditTrackIsAvailable] = useState(true);
 
   const [result, setResult] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const hasAlbums = albumList.length > 0;
 
   async function createAlbum() {
     setResult("");
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/studio/album", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          artistId,
+          name: albumName,
+          coverUrl: albumCoverUrl || undefined,
+          releaseAt: albumReleaseAt || undefined,
+        }),
+      });
 
-    const res = await fetch("/api/studio/album", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        artistId,
-        name: albumName,
-        coverUrl: albumCoverUrl || undefined,
-        releaseAt: albumReleaseAt || undefined,
-      }),
-    });
+      const json: unknown = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setResult(`Album hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
+        return;
+      }
 
-    const json: unknown = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setResult(`Album hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
-      return;
+      setResult("Albüm oluşturuldu. Listeye düşmesi için sayfayı yenile.");
+    } finally {
+      setIsLoading(false);
     }
-
-    setResult("Albüm oluşturuldu. Listeye düşmesi için sayfayı yenile.");
   }
 
   async function saveProfile() {
     setResult("");
-    const res = await fetch(`/api/studio/artist/${artistId}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        name: profileName,
-        bio: profileBio,
-        profileImageUrl: profileImg,
-      }),
-    });
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/studio/artist/${artistId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: profileName,
+          bio: profileBio,
+          profileImageUrl: profileImg,
+        }),
+      });
 
-    if (!res.ok) {
-      const json: unknown = await res.json().catch(() => ({}));
-      setResult(`Profil hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
-      return;
+      if (!res.ok) {
+        const json: unknown = await res.json().catch(() => ({}));
+        setResult(`Profil hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
+        return;
+      }
+
+      setResult("Profil güncellendi.");
+    } finally {
+      setIsLoading(false);
     }
-
-    setResult("Profil güncellendi.");
   }
 
   function isoToYmd(iso: string | null): string {
@@ -168,28 +178,32 @@ export function ArtistStudio({ artistId, artistName: initialName, artistBio: ini
   async function saveAlbumEdits() {
     setResult("");
     if (!editAlbumId.trim()) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/studio/album/${editAlbumId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: editAlbumName,
+          coverUrl: editAlbumCoverUrl,
+          releaseAt: editAlbumReleaseAt,
+        }),
+      });
 
-    const res = await fetch(`/api/studio/album/${editAlbumId}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        name: editAlbumName,
-        coverUrl: editAlbumCoverUrl,
-        releaseAt: editAlbumReleaseAt,
-      }),
-    });
+      const json: unknown = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setResult(`Album güncelleme hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
+        return;
+      }
 
-    const json: unknown = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setResult(`Album güncelleme hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
-      return;
+      const updated = (json as { album?: (typeof albumList)[number] }).album;
+      if (updated && typeof updated === "object" && typeof updated.id === "string") {
+        setAlbumList((prev) => prev.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)));
+      }
+      setResult("Albüm güncellendi.");
+    } finally {
+      setIsLoading(false);
     }
-
-    const updated = (json as { album?: (typeof albumList)[number] }).album;
-    if (updated && typeof updated === "object" && typeof updated.id === "string") {
-      setAlbumList((prev) => prev.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)));
-    }
-    setResult("Albüm güncellendi.");
   }
 
   async function deleteAlbum() {
@@ -197,50 +211,59 @@ export function ArtistStudio({ artistId, artistName: initialName, artistBio: ini
     if (!confirm("Bu albümü ve içindeki tüm şarkıları silmek istediğinize emin misiniz? (Satın alınan şarkılar varsa silinemez)")) return;
 
     setResult("");
-    const res = await fetch(`/api/studio/album/${editAlbumId}`, { method: "DELETE" });
-    const json: unknown = await res.json().catch(() => ({}));
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/studio/album/${editAlbumId}`, { method: "DELETE" });
+      const json: unknown = await res.json().catch(() => ({}));
 
-    if (!res.ok) {
-      setResult(`Albüm silme hata: ${getErrorMessage(json) ?? "Bilinmeyen"}`);
-      return;
+      if (!res.ok) {
+        setResult(`Albüm silme hata: ${getErrorMessage(json) ?? "Bilinmeyen"}`);
+        return;
+      }
+
+      setAlbumList((prev) => prev.filter((x) => x.id !== editAlbumId));
+      setTrackList((prev) => prev.filter((x) => x.albumId !== editAlbumId));
+      setEditAlbumId("");
+      setEditAlbumName("");
+      setEditAlbumCoverUrl("");
+      setResult("Albüm ve şarkıları silindi.");
+    } finally {
+      setIsLoading(false);
     }
-
-    setAlbumList((prev) => prev.filter((x) => x.id !== editAlbumId));
-    setTrackList((prev) => prev.filter((x) => x.albumId !== editAlbumId));
-    setEditAlbumId("");
-    setEditAlbumName("");
-    setEditAlbumCoverUrl("");
-    setResult("Albüm ve şarkıları silindi.");
   }
 
   async function createTrack() {
     setResult("");
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/studio/track", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          artistId,
+          albumId: trackAlbumId,
+          name: trackName,
+          cdnAudioUrl: trackCdnAudioUrl,
+          previewAudioUrl: trackPreviewAudioUrl || undefined,
+          coverImageUrl: trackCoverImageUrl || undefined,
+          genre: trackGenre || undefined,
+          bpm: trackBpm || undefined,
+          basePriceCents: trackBasePriceCents,
+          effectivePriceCents: trackEffectivePriceCents,
+          isAvailable: trackIsAvailable,
+        }),
+      });
 
-    const res = await fetch("/api/studio/track", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        artistId,
-        albumId: trackAlbumId,
-        name: trackName,
-        cdnAudioUrl: trackCdnAudioUrl,
-        previewAudioUrl: trackPreviewAudioUrl || undefined,
-        coverImageUrl: trackCoverImageUrl || undefined,
-        genre: trackGenre || undefined,
-        bpm: trackBpm || undefined,
-        basePriceCents: trackBasePriceCents,
-        effectivePriceCents: trackEffectivePriceCents,
-        isAvailable: trackIsAvailable,
-      }),
-    });
+      const json: unknown = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setResult(`Track hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
+        return;
+      }
 
-    const json: unknown = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setResult(`Track hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
-      return;
+      setResult("Şarkı oluşturuldu.");
+    } finally {
+      setIsLoading(false);
     }
-
-    setResult("Şarkı oluşturuldu.");
   }
 
   function onPickEditTrack(nextId: string) {
@@ -275,35 +298,39 @@ export function ArtistStudio({ artistId, artistName: initialName, artistBio: ini
   async function saveTrackEdits() {
     setResult("");
     if (!editTrackId.trim()) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/studio/track/${editTrackId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          albumId: editTrackAlbumId,
+          name: editTrackName,
+          cdnAudioUrl: editTrackCdnAudioUrl,
+          previewAudioUrl: editTrackPreviewAudioUrl,
+          coverImageUrl: editTrackCoverImageUrl,
+          genre: editTrackGenre,
+          bpm: editTrackBpm,
+          basePriceCents: editTrackBasePriceCents,
+          effectivePriceCents: editTrackEffectivePriceCents,
+          isAvailable: editTrackIsAvailable,
+        }),
+      });
 
-    const res = await fetch(`/api/studio/track/${editTrackId}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        albumId: editTrackAlbumId,
-        name: editTrackName,
-        cdnAudioUrl: editTrackCdnAudioUrl,
-        previewAudioUrl: editTrackPreviewAudioUrl,
-        coverImageUrl: editTrackCoverImageUrl,
-        genre: editTrackGenre,
-        bpm: editTrackBpm,
-        basePriceCents: editTrackBasePriceCents,
-        effectivePriceCents: editTrackEffectivePriceCents,
-        isAvailable: editTrackIsAvailable,
-      }),
-    });
+      const json: unknown = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setResult(`Track güncelleme hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
+        return;
+      }
 
-    const json: unknown = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setResult(`Track güncelleme hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
-      return;
+      const updated = (json as { track?: (typeof trackList)[number] }).track;
+      if (updated && typeof updated === "object" && typeof updated.id === "string") {
+        setTrackList((prev) => prev.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)));
+      }
+      setResult("Şarkı güncellendi.");
+    } finally {
+      setIsLoading(false);
     }
-
-    const updated = (json as { track?: (typeof trackList)[number] }).track;
-    if (updated && typeof updated === "object" && typeof updated.id === "string") {
-      setTrackList((prev) => prev.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)));
-    }
-    setResult("Şarkı güncellendi.");
   }
 
   async function deleteTrack() {
@@ -311,19 +338,24 @@ export function ArtistStudio({ artistId, artistName: initialName, artistBio: ini
     if (!confirm("Bu şarkıyı kalıcı olarak silmek istediğinize emin misiniz? (Satın alan kullanıcılar varsa silinemez)")) return;
 
     setResult("");
-    const res = await fetch(`/api/studio/track/${editTrackId}`, { method: "DELETE" });
-    const json: unknown = await res.json().catch(() => ({}));
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/studio/track/${editTrackId}`, { method: "DELETE" });
+      const json: unknown = await res.json().catch(() => ({}));
 
-    if (!res.ok) {
-      setResult(`Şarkı silme hata: ${getErrorMessage(json) ?? "Bilinmeyen"}`);
-      return;
+      if (!res.ok) {
+        setResult(`Şarkı silme hata: ${getErrorMessage(json) ?? "Bilinmeyen"}`);
+        return;
+      }
+
+      setTrackList((prev) => prev.filter((x) => x.id !== editTrackId));
+      setEditTrackId("");
+      setEditTrackName("");
+      setEditTrackCoverImageUrl("");
+      setResult("Şarkı silindi.");
+    } finally {
+      setIsLoading(false);
     }
-
-    setTrackList((prev) => prev.filter((x) => x.id !== editTrackId));
-    setEditTrackId("");
-    setEditTrackName("");
-    setEditTrackCoverImageUrl("");
-    setResult("Şarkı silindi.");
   }
 
   return (
@@ -411,7 +443,7 @@ export function ArtistStudio({ artistId, artistName: initialName, artistBio: ini
             <label htmlFor="p-bio" className={labelClass}>Biyografi</label>
             <textarea id="p-bio" className={inputClass + " h-24 py-2 resize-none"} value={profileBio} onChange={e => setProfileBio(e.target.value)} placeholder="Kendinden bahset..." />
           </div>
-          <button className={buttonClass} onClick={saveProfile} disabled={!profileName.trim()}>
+          <button className={buttonClass} onClick={saveProfile} disabled={isLoading || !profileName.trim()}>
             Profili Kaydet
           </button>
         </div>
@@ -455,7 +487,7 @@ export function ArtistStudio({ artistId, artistName: initialName, artistBio: ini
             />
           </div>
 
-          <button className={buttonClass} onClick={createAlbum} disabled={!albumName.trim()}>
+          <button className={buttonClass} onClick={createAlbum} disabled={isLoading || !albumName.trim()}>
             Albüm Oluştur
           </button>
         </div>
@@ -516,10 +548,10 @@ export function ArtistStudio({ artistId, artistName: initialName, artistBio: ini
           </div>
 
           <div className="flex gap-3">
-            <button className={buttonClass + " flex-1"} onClick={saveAlbumEdits} disabled={!editAlbumId || !editAlbumName.trim()}>
+            <button className={buttonClass + " flex-1"} onClick={saveAlbumEdits} disabled={isLoading || !editAlbumId || !editAlbumName.trim()}>
               Albümü Kaydet
             </button>
-            <button className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20" onClick={deleteAlbum} disabled={!editAlbumId}>
+            <button className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20" onClick={deleteAlbum} disabled={isLoading || !editAlbumId}>
               Albümü Sil
             </button>
           </div>
@@ -670,7 +702,7 @@ export function ArtistStudio({ artistId, artistName: initialName, artistBio: ini
           <button
             className={buttonClass}
             onClick={createTrack}
-            disabled={!trackAlbumId.trim() || !trackName.trim() || !trackCdnAudioUrl.trim()}
+            disabled={isLoading || !trackAlbumId.trim() || !trackName.trim() || !trackCdnAudioUrl.trim()}
           >
             Şarkı Oluştur
           </button>
@@ -862,7 +894,7 @@ export function ArtistStudio({ artistId, artistName: initialName, artistBio: ini
           <button
             className={buttonClass}
             onClick={saveTrackEdits}
-            disabled={!editTrackId.trim() || !editTrackAlbumId.trim() || !editTrackName.trim() || !editTrackCdnAudioUrl.trim()}
+            disabled={isLoading || !editTrackId.trim() || !editTrackAlbumId.trim() || !editTrackName.trim() || !editTrackCdnAudioUrl.trim()}
           >
             Şarkıyı Kaydet
           </button>

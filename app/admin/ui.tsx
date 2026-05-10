@@ -95,6 +95,7 @@ export function AdminStudio({ artists, albums, tracks }: Props) {
   const [editTrackIsSponsored, setEditTrackIsSponsored] = useState(false);
 
   const [result, setResult] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
   const hasArtists = artistList.length > 0;
 
   const artistOptions = useMemo(() => artistList, [artistList]);
@@ -112,37 +113,41 @@ export function AdminStudio({ artists, albums, tracks }: Props) {
 
   async function createArtist() {
     setResult("");
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/studio/artist", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: newArtistName,
+          bio: newArtistBio || undefined,
+          profileImageUrl: newArtistProfileImageUrl || undefined,
+          email: newArtistEmail,
+          username: newArtistUsername,
+          password: newArtistPassword,
+        }),
+      });
 
-    const res = await fetch("/api/studio/artist", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        name: newArtistName,
-        bio: newArtistBio || undefined,
-        profileImageUrl: newArtistProfileImageUrl || undefined,
-        email: newArtistEmail,
-        username: newArtistUsername,
-        password: newArtistPassword,
-      }),
-    });
+      const json: unknown = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setResult(`Sanatçı hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
+        return;
+      }
 
-    const json: unknown = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setResult(`Sanatçı hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
-      return;
-    }
-
-    const created = (json as { artist?: ArtistOption }).artist;
-    if (created) {
-      setArtistList((prev) => [...prev, created]);
-      setArtistId(created.id); // select the newly created artist
-      setNewArtistName("");
-      setNewArtistBio("");
-      setNewArtistProfileImageUrl("");
-      setNewArtistEmail("");
-      setNewArtistUsername("");
-      setNewArtistPassword("");
-      setResult("Sanatçı ve giriş hesabı oluşturuldu!");
+      const created = (json as { artist?: ArtistOption }).artist;
+      if (created) {
+        setArtistList((prev) => [...prev, created]);
+        setArtistId(created.id); // select the newly created artist
+        setNewArtistName("");
+        setNewArtistBio("");
+        setNewArtistProfileImageUrl("");
+        setNewArtistEmail("");
+        setNewArtistUsername("");
+        setNewArtistPassword("");
+        setResult("Sanatçı ve giriş hesabı oluşturuldu!");
+      }
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -163,51 +168,59 @@ export function AdminStudio({ artists, albums, tracks }: Props) {
   async function saveArtistEdits() {
     setResult("");
     if (!editArtistId) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/studio/artist/${editArtistId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: editArtistName,
+          bio: editArtistBio,
+          profileImageUrl: editArtistProfileImageUrl,
+        }),
+      });
 
-    const res = await fetch(`/api/studio/artist/${editArtistId}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        name: editArtistName,
-        bio: editArtistBio,
-        profileImageUrl: editArtistProfileImageUrl,
-      }),
-    });
+      const json: unknown = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setResult(`Sanatçı güncelleme hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
+        return;
+      }
 
-    const json: unknown = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setResult(`Sanatçı güncelleme hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
-      return;
+      const updated = (json as { artist?: ArtistOption }).artist;
+      if (updated) {
+        setArtistList((prev) => prev.map(x => x.id === updated.id ? { ...x, ...updated } : x));
+      }
+      setResult("Sanatçı güncellendi.");
+    } finally {
+      setIsLoading(false);
     }
-
-    const updated = (json as { artist?: ArtistOption }).artist;
-    if (updated) {
-      setArtistList((prev) => prev.map(x => x.id === updated.id ? { ...x, ...updated } : x));
-    }
-    setResult("Sanatçı güncellendi.");
   }
 
   async function createAlbum() {
     setResult("");
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/studio/album", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          artistId,
+          name: albumName,
+          coverUrl: albumCoverUrl || undefined,
+          releaseAt: albumReleaseAt || undefined,
+        }),
+      });
 
-    const res = await fetch("/api/studio/album", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        artistId,
-        name: albumName,
-        coverUrl: albumCoverUrl || undefined,
-        releaseAt: albumReleaseAt || undefined,
-      }),
-    });
+      const json: unknown = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setResult(`Album hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
+        return;
+      }
 
-    const json: unknown = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setResult(`Album hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
-      return;
+      setResult("Albüm oluşturuldu. Listeye düşmesi için sayfayı yenile.");
+    } finally {
+      setIsLoading(false);
     }
-
-    setResult("Albüm oluşturuldu. Listeye düşmesi için sayfayı yenile.");
   }
 
   function isoToYmd(iso: string | null): string {
@@ -237,28 +250,32 @@ export function AdminStudio({ artists, albums, tracks }: Props) {
   async function saveAlbumEdits() {
     setResult("");
     if (!editAlbumId.trim()) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/studio/album/${editAlbumId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: editAlbumName,
+          coverUrl: editAlbumCoverUrl,
+          releaseAt: editAlbumReleaseAt,
+        }),
+      });
 
-    const res = await fetch(`/api/studio/album/${editAlbumId}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        name: editAlbumName,
-        coverUrl: editAlbumCoverUrl,
-        releaseAt: editAlbumReleaseAt,
-      }),
-    });
+      const json: unknown = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setResult(`Album güncelleme hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
+        return;
+      }
 
-    const json: unknown = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setResult(`Album güncelleme hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
-      return;
+      const updated = (json as { album?: AlbumOption }).album;
+      if (updated && typeof updated === "object" && typeof updated.id === "string") {
+        setAlbumList((prev) => prev.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)));
+      }
+      setResult("Albüm güncellendi.");
+    } finally {
+      setIsLoading(false);
     }
-
-    const updated = (json as { album?: AlbumOption }).album;
-    if (updated && typeof updated === "object" && typeof updated.id === "string") {
-      setAlbumList((prev) => prev.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)));
-    }
-    setResult("Albüm güncellendi.");
   }
 
   async function deleteAlbum() {
@@ -266,50 +283,59 @@ export function AdminStudio({ artists, albums, tracks }: Props) {
     if (!confirm("Bu albümü ve içindeki tüm şarkıları silmek istediğinize emin misiniz? (Satın alınan şarkılar varsa silinemez)")) return;
 
     setResult("");
-    const res = await fetch(`/api/studio/album/${editAlbumId}`, { method: "DELETE" });
-    const json: unknown = await res.json().catch(() => ({}));
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/studio/album/${editAlbumId}`, { method: "DELETE" });
+      const json: unknown = await res.json().catch(() => ({}));
 
-    if (!res.ok) {
-      setResult(`Albüm silme hata: ${getErrorMessage(json) ?? "Bilinmeyen"}`);
-      return;
+      if (!res.ok) {
+        setResult(`Albüm silme hata: ${getErrorMessage(json) ?? "Bilinmeyen"}`);
+        return;
+      }
+
+      setAlbumList((prev) => prev.filter((x) => x.id !== editAlbumId));
+      setTrackList((prev) => prev.filter((x) => x.albumId !== editAlbumId));
+      setEditAlbumId("");
+      setEditAlbumName("");
+      setEditAlbumCoverUrl("");
+      setResult("Albüm ve şarkıları silindi.");
+    } finally {
+      setIsLoading(false);
     }
-
-    setAlbumList((prev) => prev.filter((x) => x.id !== editAlbumId));
-    setTrackList((prev) => prev.filter((x) => x.albumId !== editAlbumId));
-    setEditAlbumId("");
-    setEditAlbumName("");
-    setEditAlbumCoverUrl("");
-    setResult("Albüm ve şarkıları silindi.");
   }
 
   async function createTrack() {
     setResult("");
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/studio/track", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          artistId,
+          albumId: trackAlbumId,
+          name: trackName,
+          cdnAudioUrl: trackCdnAudioUrl,
+          previewAudioUrl: trackPreviewAudioUrl || undefined,
+          coverImageUrl: trackCoverImageUrl || undefined,
+          genre: trackGenre || undefined,
+          bpm: trackBpm || undefined,
+          basePriceCents: trackBasePriceCents,
+          effectivePriceCents: trackEffectivePriceCents,
+          isAvailable: trackIsAvailable,
+        }),
+      });
 
-    const res = await fetch("/api/studio/track", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        artistId,
-        albumId: trackAlbumId,
-        name: trackName,
-        cdnAudioUrl: trackCdnAudioUrl,
-        previewAudioUrl: trackPreviewAudioUrl || undefined,
-        coverImageUrl: trackCoverImageUrl || undefined,
-        genre: trackGenre || undefined,
-        bpm: trackBpm || undefined,
-        basePriceCents: trackBasePriceCents,
-        effectivePriceCents: trackEffectivePriceCents,
-        isAvailable: trackIsAvailable,
-      }),
-    });
+      const json: unknown = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setResult(`Track hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
+        return;
+      }
 
-    const json: unknown = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setResult(`Track hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
-      return;
+      setResult("Şarkı oluşturuldu.");
+    } finally {
+      setIsLoading(false);
     }
-
-    setResult("Şarkı oluşturuldu.");
   }
 
   function onPickEditTrack(nextId: string) {
@@ -345,36 +371,40 @@ export function AdminStudio({ artists, albums, tracks }: Props) {
   async function saveTrackEdits() {
     setResult("");
     if (!editTrackId.trim()) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/studio/track/${editTrackId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          albumId: editTrackAlbumId,
+          name: editTrackName,
+          cdnAudioUrl: editTrackCdnAudioUrl,
+          previewAudioUrl: editTrackPreviewAudioUrl,
+          coverImageUrl: editTrackCoverImageUrl,
+          genre: editTrackGenre,
+          bpm: editTrackBpm,
+          basePriceCents: editTrackBasePriceCents,
+          effectivePriceCents: editTrackEffectivePriceCents,
+          isAvailable: editTrackIsAvailable,
+          isSponsored: editTrackIsSponsored,
+        }),
+      });
 
-    const res = await fetch(`/api/studio/track/${editTrackId}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        albumId: editTrackAlbumId,
-        name: editTrackName,
-        cdnAudioUrl: editTrackCdnAudioUrl,
-        previewAudioUrl: editTrackPreviewAudioUrl,
-        coverImageUrl: editTrackCoverImageUrl,
-        genre: editTrackGenre,
-        bpm: editTrackBpm,
-        basePriceCents: editTrackBasePriceCents,
-        effectivePriceCents: editTrackEffectivePriceCents,
-        isAvailable: editTrackIsAvailable,
-        isSponsored: editTrackIsSponsored,
-      }),
-    });
+      const json: unknown = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setResult(`Track güncelleme hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
+        return;
+      }
 
-    const json: unknown = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setResult(`Track güncelleme hata (${res.status}): ${getErrorMessage(json) ?? "Bilinmeyen"}`);
-      return;
+      const updated = (json as { track?: TrackOption }).track;
+      if (updated && typeof updated === "object" && typeof updated.id === "string") {
+        setTrackList((prev) => prev.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)));
+      }
+      setResult("Şarkı güncellendi.");
+    } finally {
+      setIsLoading(false);
     }
-
-    const updated = (json as { track?: TrackOption }).track;
-    if (updated && typeof updated === "object" && typeof updated.id === "string") {
-      setTrackList((prev) => prev.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)));
-    }
-    setResult("Şarkı güncellendi.");
   }
 
   async function deleteTrack() {
@@ -382,19 +412,24 @@ export function AdminStudio({ artists, albums, tracks }: Props) {
     if (!confirm("Bu şarkıyı kalıcı olarak silmek istediğinize emin misiniz? (Satın alan kullanıcılar varsa silinemez)")) return;
 
     setResult("");
-    const res = await fetch(`/api/studio/track/${editTrackId}`, { method: "DELETE" });
-    const json: unknown = await res.json().catch(() => ({}));
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/studio/track/${editTrackId}`, { method: "DELETE" });
+      const json: unknown = await res.json().catch(() => ({}));
 
-    if (!res.ok) {
-      setResult(`Şarkı silme hata: ${getErrorMessage(json) ?? "Bilinmeyen"}`);
-      return;
+      if (!res.ok) {
+        setResult(`Şarkı silme hata: ${getErrorMessage(json) ?? "Bilinmeyen"}`);
+        return;
+      }
+
+      setTrackList((prev) => prev.filter((x) => x.id !== editTrackId));
+      setEditTrackId("");
+      setEditTrackName("");
+      setEditTrackCoverImageUrl("");
+      setResult("Şarkı silindi.");
+    } finally {
+      setIsLoading(false);
     }
-
-    setTrackList((prev) => prev.filter((x) => x.id !== editTrackId));
-    setEditTrackId("");
-    setEditTrackName("");
-    setEditTrackCoverImageUrl("");
-    setResult("Şarkı silindi.");
   }
 
   return (
@@ -475,7 +510,7 @@ export function AdminStudio({ artists, albums, tracks }: Props) {
               placeholder="••••••••"
             />
           </div>
-          <button className={buttonClass} onClick={createArtist} disabled={!newArtistName.trim() || !newArtistEmail.trim() || !newArtistPassword.trim()}>
+          <button className={buttonClass} onClick={createArtist} disabled={isLoading || !newArtistName.trim() || !newArtistEmail.trim() || !newArtistPassword.trim()}>
             Sanatçı ve Hesap Oluştur
           </button>
         </div>
@@ -542,7 +577,7 @@ export function AdminStudio({ artists, albums, tracks }: Props) {
               disabled={!editArtistId}
             />
           </div>
-          <button className={buttonClass} onClick={saveArtistEdits} disabled={!editArtistId || !editArtistName.trim()}>
+          <button className={buttonClass} onClick={saveArtistEdits} disabled={isLoading || !editArtistId || !editArtistName.trim()}>
             Sanatçıyı Güncelle
           </button>
         </div>
@@ -613,7 +648,7 @@ export function AdminStudio({ artists, albums, tracks }: Props) {
             />
           </div>
 
-          <button className={buttonClass} onClick={createAlbum} disabled={!hasArtists || !albumName.trim()}>
+          <button className={buttonClass} onClick={createAlbum} disabled={isLoading || !hasArtists || !albumName.trim()}>
             Albüm Oluştur
           </button>
         </div>
@@ -676,14 +711,14 @@ export function AdminStudio({ artists, albums, tracks }: Props) {
             <button
               className={buttonClass + " flex-1"}
               onClick={saveAlbumEdits}
-              disabled={!hasArtists || !editAlbumId.trim() || !editAlbumName.trim()}
+              disabled={isLoading || !hasArtists || !editAlbumId.trim() || !editAlbumName.trim()}
             >
               Albümü Kaydet
             </button>
             <button
               className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
               onClick={deleteAlbum}
-              disabled={!editAlbumId}
+              disabled={isLoading || !editAlbumId}
             >
               Albümü Sil
             </button>
@@ -835,7 +870,7 @@ export function AdminStudio({ artists, albums, tracks }: Props) {
           <button
             className={buttonClass}
             onClick={createTrack}
-            disabled={!hasArtists || !trackAlbumId.trim() || !trackName.trim() || !trackCdnAudioUrl.trim()}
+            disabled={isLoading || !hasArtists || !trackAlbumId.trim() || !trackName.trim() || !trackCdnAudioUrl.trim()}
           >
             Şarkı Oluştur
           </button>
@@ -1044,14 +1079,14 @@ export function AdminStudio({ artists, albums, tracks }: Props) {
             <button
               className={buttonClass + " flex-1"}
               onClick={saveTrackEdits}
-              disabled={!hasArtists || !editTrackId.trim() || !editTrackAlbumId.trim() || !editTrackName.trim() || !editTrackCdnAudioUrl.trim()}
+              disabled={isLoading || !hasArtists || !editTrackId.trim() || !editTrackAlbumId.trim() || !editTrackName.trim() || !editTrackCdnAudioUrl.trim()}
             >
               Şarkıyı Kaydet
             </button>
             <button
               className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
               onClick={deleteTrack}
-              disabled={!editTrackId}
+              disabled={isLoading || !editTrackId}
             >
               Şarkıyı Sil
             </button>
